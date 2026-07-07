@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 - 2026-07-07
 
 - Replaced placeholder license with MIT License.
 - Updated public repository security and upload guidance.
