@@ -68,3 +68,14 @@ def test_idempotent_no_backup_stacking(tmp_path: Path):
     _install(repo)
     _install(repo)  # second run should not create a backup of our own hook
     assert not (repo / ".git" / "hooks" / "pre-commit.local").exists()
+
+
+def test_refreshes_backup_when_hook_recustomized(tmp_path: Path):
+    repo = _init_repo_with_bin(tmp_path)
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    hook.write_text("#!/bin/sh\necho v1\n")
+    _install(repo)  # backs up v1, installs the managed hook
+    # User re-customizes the pre-commit hook after the first install.
+    hook.write_text("#!/bin/sh\necho v2\n")
+    _install(repo)  # should refresh the backup to the newer customization
+    assert "echo v2" in (repo / ".git" / "hooks" / "pre-commit.local").read_text()

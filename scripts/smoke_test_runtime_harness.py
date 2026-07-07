@@ -1083,6 +1083,7 @@ def smoke_test(keep: bool) -> Path:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 check=False,
+                timeout=60,
             )
             if result.returncode not in {0, 1}:
                 raise AssertionError(

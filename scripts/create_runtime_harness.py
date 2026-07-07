@@ -124,10 +124,12 @@ def main() -> int:
     for path in created:
         print(f"- {path.relative_to(target_root)}")
 
-    hooks_note = maybe_install_hooks(target_root, args.install_hooks)
+    hooks_note, hooks_ok = maybe_install_hooks(target_root, args.install_hooks)
     if hooks_note:
         print(hooks_note)
-    return 0
+    # Surface a failed hook install to callers (e.g. adopt_project.py) rather
+    # than reporting success while write-lock enforcement is not actually wired.
+    return 0 if hooks_ok else 1
 
 
 def is_git_repo(target_root: Path) -> bool:
@@ -142,14 +144,19 @@ def is_git_repo(target_root: Path) -> bool:
     return result.returncode == 0 and result.stdout.strip() == "true"
 
 
-def maybe_install_hooks(target_root: Path, install_hooks: bool | None) -> str:
-    """Install the write-lock hook unless disabled or the target is not a git repo."""
+def maybe_install_hooks(target_root: Path, install_hooks: bool | None) -> tuple[str, bool]:
+    """Install the write-lock hook unless disabled or the target is not a git repo.
+
+    Returns ``(message, ok)``. ``ok`` is False only when a hook install was
+    attempted and genuinely failed; skipping (disabled, or not a git repo) is a
+    success.
+    """
     if install_hooks is False:
-        return "Skipped git hook installation (--no-install-hooks)."
+        return "Skipped git hook installation (--no-install-hooks).", True
     if not is_git_repo(target_root):
         if install_hooks is True:
-            return "Skipped git hook installation: target is not a git repository."
-        return ""
+            return "Skipped git hook installation: target is not a git repository.", True
+        return "", True
     installer = target_root / "orchestration" / "bin" / "install-hooks.py"
     result = subprocess.run(
         [sys.executable, str(installer), "--target", str(target_root)],
@@ -160,8 +167,8 @@ def maybe_install_hooks(target_root: Path, install_hooks: bool | None) -> str:
         check=False,
     )
     if result.returncode != 0:
-        return f"Warning: git hook installation failed:\n{result.stdout.strip()}"
-    return result.stdout.strip()
+        return f"Warning: git hook installation failed:\n{result.stdout.strip()}", False
+    return result.stdout.strip(), True
 
 
 if __name__ == "__main__":

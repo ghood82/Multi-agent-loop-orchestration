@@ -138,6 +138,32 @@ def test_staged_integration_blocks_then_allows(tmp_path: Path):
     assert json.loads(result.stdout)["ok"] is True
 
 
+def test_staged_deletion_of_production_file_is_blocked(tmp_path: Path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _set_lock(repo, "inactive", [])
+    (repo / "src").mkdir()
+    (repo / "src" / "app.py").write_text("x = 1\n")
+    _git(repo, "add", "src/app.py")
+    _git(repo, "commit", "-m", "add app")
+    # Deleting a production file with no active lock is an unauthorized change.
+    _git(repo, "rm", "src/app.py")
+    result = _run_staged(repo)
+    assert result.returncode == 1
+    assert json.loads(result.stdout)["ok"] is False
+
+
+def test_missing_state_allows_commit(tmp_path: Path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)  # enforcer present, but no state.json written
+    (repo / "src").mkdir()
+    (repo / "src" / "app.py").write_text("x = 1\n")
+    _git(repo, "add", "src/app.py")
+    result = _run_staged(repo)
+    assert result.returncode == 0
+    assert json.loads(result.stdout).get("enforced") is False
+
+
 def test_override_env_downgrades_to_warning(tmp_path: Path):
     repo = tmp_path / "repo"
     _init_repo(repo)

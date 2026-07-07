@@ -58,7 +58,9 @@ def install_harness(repo: Path, **overrides: str) -> subprocess.CompletedProcess
     command = [sys.executable, str(CREATE_HARNESS), "--target", str(repo)]
     for flag, value in args.items():
         command.extend([flag, value])
-    return subprocess.run(command, cwd=PROJECT_ROOT, check=True, capture_output=True, text=True)
+    return subprocess.run(
+        command, cwd=PROJECT_ROOT, check=True, capture_output=True, text=True, timeout=120
+    )
 
 
 def run_bin(repo: Path, script: str, *args: str) -> subprocess.CompletedProcess[str]:
@@ -68,6 +70,7 @@ def run_bin(repo: Path, script: str, *args: str) -> subprocess.CompletedProcess[
         cwd=repo,
         text=True,
         capture_output=True,
+        timeout=60,
     )
 
 

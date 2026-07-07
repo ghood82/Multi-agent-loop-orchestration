@@ -16,6 +16,9 @@ name: Write-lock check
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   write-lock:
     runs-on: ubuntu-latest
@@ -24,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,7 +35,9 @@ jobs:
           python-version: "3.x"
 
       - name: Enforce production-code write lock
+        # No --json here: on a violation the enforcer prints the human-readable
+        # list of unauthorized changes and exits non-zero, so PR authors see an
+        # actionable message directly in the Actions log.
         run: |
           python3 orchestration/bin/enforce-write-lock.py \
-            --against "origin/${{ github.base_ref }}" \
-            --json
+            --against "origin/${{ github.base_ref }}"

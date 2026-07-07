@@ -124,7 +124,10 @@ def main(argv: list[str] | None = None) -> int:
         existing = hook_path.read_text()
         if not is_managed(existing):
             local = hooks / "pre-commit.local"
-            if not local.exists():
+            # Back up an unmanaged hook. Also refresh the backup if the user has
+            # re-customized the hook since the last install, so a newer manual
+            # edit is never silently discarded.
+            if not local.exists() or local.read_text() != existing:
                 local.write_text(existing)
                 local.chmod(0o755)
                 preserved = str(local)

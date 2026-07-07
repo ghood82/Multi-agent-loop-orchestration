@@ -15,8 +15,15 @@
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 ENFORCER="$ROOT/orchestration/bin/enforce-write-lock.py"
 
+# Prefer python3, fall back to python (e.g. Windows Git Bash without a python3 alias).
+PY="$(command -v python3 || command -v python || true)"
+
 if [ -f "$ENFORCER" ]; then
-    python3 "$ENFORCER" --staged || exit $?
+    if [ -n "$PY" ]; then
+        "$PY" "$ENFORCER" --staged || exit $?
+    else
+        echo "write-lock hook: no python interpreter found; skipping enforcement." >&2
+    fi
 fi
 
 HOOKS_DIR="$(git rev-parse --git-path hooks 2>/dev/null)"

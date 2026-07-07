@@ -94,7 +94,9 @@ def run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def git_names(diff_args: list[str]) -> list[str]:
-    result = run_git(["diff", "--name-only", "--diff-filter=ACMR", "-z", *diff_args])
+    # Include Deleted (D) as well as Added/Copied/Modified/Renamed: deleting a
+    # forbidden or preserved file is an unauthorized change too.
+    result = run_git(["diff", "--name-only", "--diff-filter=ACMRD", "-z", *diff_args])
     if result.returncode != 0:
         raise SystemExit(f"git diff failed: {result.stdout.strip()}")
     return sorted({name for name in result.stdout.split("\0") if name})
@@ -116,7 +118,7 @@ def load_state() -> dict[str, Any]:
     try:
         state = json.loads(STATE_FILE.read_text())
     except FileNotFoundError:
-        # No control plane installed here: nothing to enforce.
+        # Missing state is handled explicitly in main(); treat as empty here.
         return {}
     except json.JSONDecodeError as exc:
         raise SystemExit(f"Invalid state JSON at {STATE_FILE}: {exc}") from exc
@@ -235,6 +237,21 @@ def main(argv: list[str] | None = None) -> int:
     require_active_lock = args.require_active_lock
     if require_active_lock is None:
         require_active_lock = bool(args.staged)
+
+    # A missing state.json means the orchestration control plane is not installed
+    # here (or is only partially installed). There is genuinely nothing to
+    # enforce, so allow the operation rather than blocking every commit with a
+    # confusing "no active write lock" message.
+    if not STATE_FILE.exists():
+        message = (
+            f"No orchestration state.json at {STATE_FILE}; "
+            "write-lock enforcement is inactive (control plane not installed)."
+        )
+        if args.json:
+            print(json.dumps({"ok": True, "enforced": False, "reason": message}, sort_keys=True))
+        else:
+            print(message)
+        return 0
 
     changed = changed_paths(args)
     state = load_state()
