@@ -12,7 +12,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 CREATE_HARNESS = SKILL_ROOT / "scripts" / "create_runtime_harness.py"
 ADOPT_PROJECT = SKILL_ROOT / "scripts" / "adopt_project.py"
@@ -103,16 +102,38 @@ def smoke_test(keep: bool) -> Path:
         )
         adopted_json = json.loads(adopted.stdout)
         assert_equal(adopted_json["project"], "Adopted Smoke Project", "adopted project name")
-        assert_true((adopted_repo / "orchestration" / "bin" / "setup-intake.py").exists(), "adopted setup intake exists")
-        assert_true((adopted_repo / "orchestration" / "bin" / "ops-check.py").exists(), "adopted ops check exists")
-        assert_true((adopted_repo / "orchestration" / "bin" / "agent-adapter.py").exists(), "adopted agent adapter exists")
-        assert_true((adopted_repo / "orchestration" / "bin" / "configure-agent-provider.py").exists(), "adopted provider config exists")
-        assert_true((adopted_repo / "orchestration" / "bin" / "doctor.py").exists(), "adopted doctor exists")
-        assert_true((adopted_repo / "orchestration" / "bin" / "requirements-matrix.py").exists(), "adopted requirements matrix exists")
-        assert_true(adopted_json["builder_handoff"].get("path"), "adopter should create builder handoff")
+        assert_true(
+            (adopted_repo / "orchestration" / "bin" / "setup-intake.py").exists(),
+            "adopted setup intake exists",
+        )
+        assert_true(
+            (adopted_repo / "orchestration" / "bin" / "ops-check.py").exists(),
+            "adopted ops check exists",
+        )
+        assert_true(
+            (adopted_repo / "orchestration" / "bin" / "agent-adapter.py").exists(),
+            "adopted agent adapter exists",
+        )
+        assert_true(
+            (adopted_repo / "orchestration" / "bin" / "configure-agent-provider.py").exists(),
+            "adopted provider config exists",
+        )
+        assert_true(
+            (adopted_repo / "orchestration" / "bin" / "doctor.py").exists(), "adopted doctor exists"
+        )
+        assert_true(
+            (adopted_repo / "orchestration" / "bin" / "requirements-matrix.py").exists(),
+            "adopted requirements matrix exists",
+        )
+        assert_true(
+            adopted_json["builder_handoff"].get("path"), "adopter should create builder handoff"
+        )
         adopted_state = load_state(adopted_repo)
         assert_equal(adopted_state["setup_intake"]["applied"], True, "adopter setup intake applied")
-        assert_true(adopted_state["ops_check"]["last_decision"] in {"PASS", "FAIL"}, "adopter should record ops check verdict")
+        assert_true(
+            adopted_state["ops_check"]["last_decision"] in {"PASS", "FAIL"},
+            "adopter should record ops check verdict",
+        )
         assert_true(adopted_state.get("handoff_packets"), "adopter should record a handoff packet")
 
         run(["git", "init"], repo, label="git init")
@@ -217,9 +238,13 @@ def smoke_test(keep: bool) -> Path:
         )
         state = load_state(repo)
         assert_equal(state["setup_intake"]["applied"], True, "setup intake applied")
-        assert_equal(state["blocking_policy"]["mode"], "bounded-recovery", "setup intake blocker mode")
+        assert_equal(
+            state["blocking_policy"]["mode"], "bounded-recovery", "setup intake blocker mode"
+        )
         assert_equal(state["blocking_policy"]["recovery_limit"], 2, "setup intake recovery limit")
-        assert_equal(state["agent_adapter"]["configured_provider"], "auto", "setup intake agent provider")
+        assert_equal(
+            state["agent_adapter"]["configured_provider"], "auto", "setup intake agent provider"
+        )
         assert_true("medium_risk" in state["decision_policy"], "setup intake decision policy")
 
         prompt_only = run(
@@ -250,8 +275,13 @@ def smoke_test(keep: bool) -> Path:
         provider_list_json = json.loads(provider_list.stdout)
         assert_true("auto" in provider_list_json["providers"], "auto provider preset should exist")
         assert_true("codex-cli" in provider_list_json["providers"], "codex-cli preset should exist")
-        assert_true("claude-code" in provider_list_json["providers"], "claude-code preset should exist")
-        assert_true("custom-command" in provider_list_json["providers"], "custom-command preset should exist")
+        assert_true(
+            "claude-code" in provider_list_json["providers"], "claude-code preset should exist"
+        )
+        assert_true(
+            "custom-command" in provider_list_json["providers"],
+            "custom-command preset should exist",
+        )
 
         auto_resolve = run(
             [
@@ -271,7 +301,10 @@ def smoke_test(keep: bool) -> Path:
         )
         auto_resolve_json = json.loads(auto_resolve.stdout)
         assert_equal(auto_resolve_json["provider"], "auto", "auto provider")
-        assert_true(auto_resolve_json["resolved_provider"] in {"codex-cli", "claude-code", "prompt-only"}, "auto resolved provider")
+        assert_true(
+            auto_resolve_json["resolved_provider"] in {"codex-cli", "claude-code", "prompt-only"},
+            "auto resolved provider",
+        )
 
         provider_config = run(
             [
@@ -288,11 +321,22 @@ def smoke_test(keep: bool) -> Path:
             label="provider configure custom command",
         )
         provider_config_json = json.loads(provider_config.stdout)
-        assert_equal(provider_config_json["config"]["active_provider"], "custom-command", "configured active provider")
+        assert_equal(
+            provider_config_json["config"]["active_provider"],
+            "custom-command",
+            "configured active provider",
+        )
         assert_equal(provider_config_json["test"]["exit_code"], 0, "provider config test exit")
-        assert_true("configured-provider-ok" in provider_config_json["test"]["result"]["stdout"], "provider config test output")
+        assert_true(
+            "configured-provider-ok" in provider_config_json["test"]["result"]["stdout"],
+            "provider config test output",
+        )
         state = load_state(repo)
-        assert_equal(state["agent_adapter"]["configured_provider"], "custom-command", "configured provider state")
+        assert_equal(
+            state["agent_adapter"]["configured_provider"],
+            "custom-command",
+            "configured provider state",
+        )
 
         adapter_run = run(
             [
@@ -320,29 +364,53 @@ def smoke_test(keep: bool) -> Path:
         assert_true("adapter-ok" in adapter_json["stdout"], "command provider stdout")
         state = load_state(repo)
         assert_true(state.get("agent_runs"), "agent adapter should record runs")
-        assert_equal(state["agent_adapter"]["last_role"], "smoke-command", "agent adapter last role")
+        assert_equal(
+            state["agent_adapter"]["last_role"], "smoke-command", "agent adapter last role"
+        )
 
         doctor = run(
-            [sys.executable, "orchestration/bin/doctor.py", "--write-report", "--json", "--events", "2"],
+            [
+                sys.executable,
+                "orchestration/bin/doctor.py",
+                "--write-report",
+                "--json",
+                "--events",
+                "2",
+            ],
             repo,
             label="doctor",
         )
         doctor_json = json.loads(doctor.stdout)
-        assert_true(doctor_json["verdict"] in {"READY_PROMPT_ONLY", "CONTINUE", "CHECK_GATES", "REMEDIATE", "WAIT", "STOP"}, "doctor verdict")
+        assert_true(
+            doctor_json["verdict"]
+            in {"READY_PROMPT_ONLY", "CONTINUE", "CHECK_GATES", "REMEDIATE", "WAIT", "STOP"},
+            "doctor verdict",
+        )
         assert_true(doctor_json["next_command"], "doctor next command")
         state = load_state(repo)
         assert_true(state["doctor"]["last_report"], "doctor should record report")
 
         matrix = run(
-            [sys.executable, "orchestration/bin/requirements-matrix.py", "--write-report", "--json", "--strict"],
+            [
+                sys.executable,
+                "orchestration/bin/requirements-matrix.py",
+                "--write-report",
+                "--json",
+                "--strict",
+            ],
             repo,
             label="requirements matrix",
         )
         matrix_json = json.loads(matrix.stdout)
         assert_equal(matrix_json["verdict"], "PASS", "requirements matrix verdict")
-        assert_true(matrix_json["requirements_passed"] == matrix_json["requirements_total"], "requirements matrix all passed")
+        assert_true(
+            matrix_json["requirements_passed"] == matrix_json["requirements_total"],
+            "requirements matrix all passed",
+        )
         state = load_state(repo)
-        assert_equal(state["requirements_matrix"]["last_decision"], "PASS", "requirements matrix state")
+        assert_equal(
+            state["requirements_matrix"]["last_decision"], "PASS", "requirements matrix state"
+        )
 
         run(
             [
@@ -384,12 +452,20 @@ def smoke_test(keep: bool) -> Path:
         )
         state = load_state(repo)
         assert_equal(state["project_name"], "Configured Smoke Project", "configured project name")
-        assert_equal(state["blocking_policy"]["mode"], "bounded-recovery", "configured blocker mode")
-        assert_true("Document AI" in state["preserved_components"], "preserved component configured")
-        assert_true("Do not remove embeddings" in state["forbidden_changes"], "forbidden change configured")
+        assert_equal(
+            state["blocking_policy"]["mode"], "bounded-recovery", "configured blocker mode"
+        )
+        assert_true(
+            "Document AI" in state["preserved_components"], "preserved component configured"
+        )
+        assert_true(
+            "Do not remove embeddings" in state["forbidden_changes"], "forbidden change configured"
+        )
         policy = json.loads((repo / "orchestration" / "operating-policy.json").read_text())
         assert_equal(policy["profile"], "strict-pr", "configured policy profile")
-        assert_equal(policy["gates"]["require_latest_eval_pass"], True, "configured eval policy gate")
+        assert_equal(
+            policy["gates"]["require_latest_eval_pass"], True, "configured eval policy gate"
+        )
         assert_file(repo, "docs/project-roadmap-state.md")
 
         eval_fixture = run(
@@ -424,7 +500,11 @@ def smoke_test(keep: bool) -> Path:
         assert_file(repo, "orchestration/" + eval_fixture_json["markdown"])
         state = load_state(repo)
         assert_true(state.get("eval_fixtures"), "eval fixture should be recorded")
-        assert_equal(state["last_eval_fixture"], "evals/fixtures/wrong-domain-policy-match.json", "last eval fixture")
+        assert_equal(
+            state["last_eval_fixture"],
+            "evals/fixtures/wrong-domain-policy-match.json",
+            "last eval fixture",
+        )
         assert_equal(state["eval_quality_status"], "fixtures-updated", "eval quality status")
 
         drift_result = run(
@@ -504,11 +584,20 @@ def smoke_test(keep: bool) -> Path:
         eval_gate_drift_json = json.loads(eval_gate_drift.stdout)
         assert_equal(eval_gate_drift_json["last_decision"], "STOP", "eval gate drift decision")
         assert_true(
-            any("Latest eval result is not PASS" in item for item in eval_gate_drift_json["blocking"]),
+            any(
+                "Latest eval result is not PASS" in item
+                for item in eval_gate_drift_json["blocking"]
+            ),
             "eval gate should explain drift block",
         )
         policy_audit_drift = run(
-            [sys.executable, "orchestration/bin/policy-audit.py", "--write-report", "--json", "--strict"],
+            [
+                sys.executable,
+                "orchestration/bin/policy-audit.py",
+                "--write-report",
+                "--json",
+                "--strict",
+            ],
             repo,
             expect=1,
             label="policy audit blocks drift",
@@ -516,7 +605,10 @@ def smoke_test(keep: bool) -> Path:
         policy_audit_drift_json = json.loads(policy_audit_drift.stdout)
         assert_equal(policy_audit_drift_json["verdict"], "FAIL", "policy audit drift verdict")
         assert_true(
-            any(item["name"] == "latest_eval_pass" for item in policy_audit_drift_json["missing_evidence"]),
+            any(
+                item["name"] == "latest_eval_pass"
+                for item in policy_audit_drift_json["missing_evidence"]
+            ),
             "policy audit should report missing eval pass",
         )
         pass_result = run(
@@ -583,7 +675,13 @@ def smoke_test(keep: bool) -> Path:
         decision_low_json = json.loads(decision_low.stdout)
         assert_equal(decision_low_json["decision"], "APPROVED_AUTONOMOUS", "low-risk decision")
         policy_audit_pass = run(
-            [sys.executable, "orchestration/bin/policy-audit.py", "--write-report", "--json", "--strict"],
+            [
+                sys.executable,
+                "orchestration/bin/policy-audit.py",
+                "--write-report",
+                "--json",
+                "--strict",
+            ],
             repo,
             label="policy audit passes after eval pass",
         )
@@ -600,7 +698,13 @@ def smoke_test(keep: bool) -> Path:
             label="policy eval gate passes after pass result",
         )
         phase_gate_block = run(
-            [sys.executable, "orchestration/bin/phase-gate.py", "--write-report", "--json", "--strict"],
+            [
+                sys.executable,
+                "orchestration/bin/phase-gate.py",
+                "--write-report",
+                "--json",
+                "--strict",
+            ],
             repo,
             expect=1,
             label="phase gate blocks missing evidence",
@@ -703,12 +807,26 @@ def smoke_test(keep: bool) -> Path:
             label="check state doc after cycle sync",
         )
         run(
-            [sys.executable, "orchestration/bin/status.py", "--write-report", "--json", "--events", "3"],
+            [
+                sys.executable,
+                "orchestration/bin/status.py",
+                "--write-report",
+                "--json",
+                "--events",
+                "3",
+            ],
             repo,
             label="operator status",
         )
         dashboard = run(
-            [sys.executable, "orchestration/bin/operating-dashboard.py", "--write-report", "--json", "--events", "3"],
+            [
+                sys.executable,
+                "orchestration/bin/operating-dashboard.py",
+                "--write-report",
+                "--json",
+                "--events",
+                "3",
+            ],
             repo,
             label="operating dashboard",
         )
@@ -718,21 +836,45 @@ def smoke_test(keep: bool) -> Path:
         dashboard_text = (repo / "orchestration" / "operating-dashboard.md").read_text()
         assert_true("## Gates" in dashboard_text, "dashboard should include gates section")
         assert_true("## Eval Status" in dashboard_text, "dashboard should include eval section")
-        assert_true("## Open Blockers" in dashboard_text, "dashboard should include blockers section")
+        assert_true(
+            "## Open Blockers" in dashboard_text, "dashboard should include blockers section"
+        )
         run(
-            [sys.executable, "orchestration/bin/operating-dashboard.py", "--check", "--json", "--events", "3"],
+            [
+                sys.executable,
+                "orchestration/bin/operating-dashboard.py",
+                "--check",
+                "--json",
+                "--events",
+                "3",
+            ],
             repo,
             label="operating dashboard check",
         )
         ops_check = run(
-            [sys.executable, "orchestration/bin/ops-check.py", "--json", "--strict", "--events", "3"],
+            [
+                sys.executable,
+                "orchestration/bin/ops-check.py",
+                "--json",
+                "--strict",
+                "--events",
+                "3",
+            ],
             repo,
             label="ops check",
         )
         ops_check_json = json.loads(ops_check.stdout)
         assert_equal(ops_check_json["verdict"], "PASS", "ops check verdict")
         handoff = run(
-            [sys.executable, "orchestration/bin/handoff-packet.py", "--role", "qa", "--write", "--write-report", "--json"],
+            [
+                sys.executable,
+                "orchestration/bin/handoff-packet.py",
+                "--role",
+                "qa",
+                "--write",
+                "--write-report",
+                "--json",
+            ],
             repo,
             label="handoff packet",
         )
@@ -741,11 +883,15 @@ def smoke_test(keep: bool) -> Path:
 
         state = load_state(repo)
         assert_equal(state["health_check"]["last_decision"], "PASS", "health check decision")
-        assert_equal(state["acceptance_audit"]["last_decision"], "PASS", "acceptance audit decision")
+        assert_equal(
+            state["acceptance_audit"]["last_decision"], "PASS", "acceptance audit decision"
+        )
         assert_equal(state["state_doc"]["status"], "synced", "state doc status")
         assert_equal(state["operating_dashboard"]["status"], "synced", "dashboard sync status")
         assert_equal(state["ops_check"]["last_decision"], "PASS", "ops check decision")
-        assert_equal(state["operator_status"]["last_decision"], "CONTINUE", "operator status decision")
+        assert_equal(
+            state["operator_status"]["last_decision"], "CONTINUE", "operator status decision"
+        )
         assert_true(state.get("handoff_packets"), "handoff packets should be recorded")
         assert_true(state.get("structured_reports"), "structured reports should be recorded")
 
@@ -770,7 +916,10 @@ def smoke_test(keep: bool) -> Path:
             label="approval request",
         )
         approval_request_json = json.loads(approval_request.stdout)
-        assert_true(Path(approval_request_json["markdown"]).exists(), "approval request markdown should exist")
+        assert_true(
+            Path(approval_request_json["markdown"]).exists(),
+            "approval request markdown should exist",
+        )
         state = load_state(repo)
         assert_true(state.get("approval_requests"), "approval requests should be recorded")
         approval_blocker_id = state["open_blockers"][0]["id"]
@@ -927,9 +1076,18 @@ def smoke_test(keep: bool) -> Path:
                 *paths,
             ]
             # Exit code is 0 (ok) or 1 (violations); accept both, assert on JSON.
-            result = subprocess.run(command, cwd=repo, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+            result = subprocess.run(
+                command,
+                cwd=repo,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
             if result.returncode not in {0, 1}:
-                raise AssertionError(f"enforce-write-lock returned {result.returncode}\n{result.stdout}")
+                raise AssertionError(
+                    f"enforce-write-lock returned {result.returncode}\n{result.stdout}"
+                )
             return json.loads(result.stdout)
 
         def set_lock(status: str, allowed: list[str]) -> None:
@@ -941,18 +1099,34 @@ def smoke_test(keep: bool) -> Path:
                 "allowed_files": allowed,
                 "forbidden_files": [],
             }
-            (repo / "orchestration" / "state.json").write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
+            (repo / "orchestration" / "state.json").write_text(
+                json.dumps(state, indent=2, sort_keys=True) + "\n"
+            )
 
         set_lock("inactive", [])
-        assert_true(not enforce(["src/app.py"], require_active=True)["ok"], "inactive lock blocks production change")
-        assert_true(enforce(["docs/guide.md", "README.md"], require_active=True)["ok"], "docs changes never blocked")
-        assert_true(enforce(["src/app.py"], require_active=False)["ok"], "CI mode allows production without active lock")
+        assert_true(
+            not enforce(["src/app.py"], require_active=True)["ok"],
+            "inactive lock blocks production change",
+        )
+        assert_true(
+            enforce(["docs/guide.md", "README.md"], require_active=True)["ok"],
+            "docs changes never blocked",
+        )
+        assert_true(
+            enforce(["src/app.py"], require_active=False)["ok"],
+            "CI mode allows production without active lock",
+        )
 
         set_lock("active", ["src/**"])
-        assert_true(enforce(["src/app.py"], require_active=True)["ok"], "active lock allows in-scope change")
+        assert_true(
+            enforce(["src/app.py"], require_active=True)["ok"], "active lock allows in-scope change"
+        )
         out_of_scope = enforce(["lib/other.py"], require_active=True)
         assert_true(not out_of_scope["ok"], "active lock blocks out-of-scope change")
-        assert_true(any("out of scope" in v for v in out_of_scope["violations"]), "out-of-scope violation is reported")
+        assert_true(
+            any("out of scope" in v for v in out_of_scope["violations"]),
+            "out-of-scope violation is reported",
+        )
 
         passed = True
         return temp_root
@@ -967,7 +1141,9 @@ def smoke_test(keep: bool) -> Path:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--keep", action="store_true", help="Keep the temporary repo for inspection.")
+    parser.add_argument(
+        "--keep", action="store_true", help="Keep the temporary repo for inspection."
+    )
     return parser.parse_args()
 
 

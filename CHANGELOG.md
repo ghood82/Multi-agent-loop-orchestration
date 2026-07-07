@@ -8,6 +8,11 @@
 - Extended the smoke test with write-lock enforcement and hook-installation coverage.
 - Added `pyproject.toml` with `orchestration-init`, `orchestration-adopt`, and `orchestration-smoke-test` console entry points.
 - Documented enforcement in the harness README, root README, and runtime boundaries.
+- Added a `tests/` pytest suite (49 tests) covering the write-lock enforcer, file guard, decision/phase/release gates, and hook installation, both as pure-function unit tests and installed-CLI integration tests.
+- Added ruff (lint + format) and mypy quality gates via `pyproject.toml` and a `Lint` CI workflow; applied ruff formatting across the codebase.
+- Expanded the smoke-test workflow to a Python 3.10–3.13 matrix and to run the unit tests.
+- Added `docs/example-run.md`, a real captured end-to-end walkthrough of the write lock and gates on a throwaway repo.
+- Clarified the skill's provider-neutral framing (agent skill packaged for Codex; harness drives Codex CLI, Claude Code, prompt-only, or a custom command).
 
 ## 0.1.0 - 2026-07-07
 

@@ -4,13 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 PLACEHOLDER_DEFAULTS = {
     "PROJECT_NAME": "TBD",
@@ -36,12 +34,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo-name", default=PLACEHOLDER_DEFAULTS["REPO_NAME"])
     parser.add_argument("--roadmap-name", default=PLACEHOLDER_DEFAULTS["ROADMAP_NAME"])
     parser.add_argument("--current-phase", default=PLACEHOLDER_DEFAULTS["CURRENT_PHASE"])
-    parser.add_argument(
-        "--current-objective", default=PLACEHOLDER_DEFAULTS["CURRENT_OBJECTIVE"]
-    )
-    parser.add_argument(
-        "--state-file-path", default=PLACEHOLDER_DEFAULTS["STATE_FILE_PATH"]
-    )
+    parser.add_argument("--current-objective", default=PLACEHOLDER_DEFAULTS["CURRENT_OBJECTIVE"])
+    parser.add_argument("--state-file-path", default=PLACEHOLDER_DEFAULTS["STATE_FILE_PATH"])
     parser.add_argument("--test-command", default=PLACEHOLDER_DEFAULTS["TEST_COMMAND"])
     parser.add_argument(
         "--force",
@@ -88,7 +82,9 @@ def should_skip(path: Path) -> bool:
     return "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}
 
 
-def copy_template(template_root: Path, target_root: Path, values: dict[str, str], force: bool) -> list[Path]:
+def copy_template(
+    template_root: Path, target_root: Path, values: dict[str, str], force: bool
+) -> list[Path]:
     created: list[Path] = []
     for src in sorted(template_root.rglob("*")):
         if should_skip(src.relative_to(template_root)):
@@ -99,9 +95,7 @@ def copy_template(template_root: Path, target_root: Path, values: dict[str, str]
             dest.mkdir(parents=True, exist_ok=True)
             continue
         if dest.exists() and not force:
-            raise FileExistsError(
-                f"{dest} already exists. Re-run with --force to overwrite it."
-            )
+            raise FileExistsError(f"{dest} already exists. Re-run with --force to overwrite it.")
         dest.parent.mkdir(parents=True, exist_ok=True)
         try:
             rendered = render_text(src.read_text(), values)

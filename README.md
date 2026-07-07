@@ -1,14 +1,15 @@
 # Multi-Agent Orchestration Skill
 
-`multi-agent-orchestration` is a Codex skill and local runtime harness for coordinating AI-assisted software work across Builder, QA, Security, Eval, Watchdog, Architect, Documentation, and Remediation roles.
+`multi-agent-orchestration` is an agent skill and provider-neutral local runtime harness for coordinating AI-assisted software work across Builder, QA, Security, Eval, Watchdog, Architect, Documentation, and Remediation roles. The skill is packaged for Codex (`agents/openai.yaml`), and the runtime harness drives whichever agent you configure — Codex CLI, Claude Code, prompt-only mode, or a custom command.
 
 The core invariant is simple: only one loop should write production code at a time. Reviewer loops can run in parallel, but production-code edits stay sequential and are governed through shared state, handoff packets, write-lock conventions, gates, and human approval requirements.
 
 ## What This Repository Contains
 
-- `SKILL.md` - the Codex skill instructions.
+- `SKILL.md` - the agent skill instructions.
 - `README.md` - this GitHub-facing overview.
 - `docs/operator-guide.md` - the detailed operator guide from the skill package.
+- `docs/example-run.md` - a real, captured end-to-end walkthrough on a throwaway repo.
 - `scripts/create_runtime_harness.py` - installs the runtime harness into a target repo.
 - `scripts/adopt_project.py` - one-command first-time adoption flow.
 - `scripts/smoke_test_runtime_harness.py` - validates the packaged harness.
@@ -103,9 +104,9 @@ python3 scripts/adopt_project.py \
   --test-command "TEST COMMAND"
 ```
 
-## Use As A Codex Skill
+## Use As An Agent Skill
 
-Clone or copy this folder to a Codex skill path using the folder name `multi-agent-orchestration`, then invoke it with a prompt like:
+Clone or copy this folder to your agent's skill path using the folder name `multi-agent-orchestration` (the metadata in `agents/openai.yaml` registers it for Codex), then invoke it with a prompt like:
 
 ```text
 Use the multi-agent-orchestration skill to set up orchestration for this repo.
