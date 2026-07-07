@@ -75,3 +75,13 @@ def test_latest_eval_pass_from_state_scalar():
     }
     decision, _, _ = rg.evaluate(args(require_latest_eval_pass=True), state, {}, "")
     assert decision == "PASS"
+
+
+def test_pr_mode_blocks_when_pr_metadata_missing():
+    state = {"watchdog": {"last_verdict": "PASS"}, "open_blockers": []}
+    decision, blocking, warnings = rg.evaluate(
+        args(mode="pr"), state, {}, "no pull request found for current branch"
+    )
+    assert decision == "STOP"
+    assert any("Unable to read PR metadata" in item for item in blocking)
+    assert warnings == []
