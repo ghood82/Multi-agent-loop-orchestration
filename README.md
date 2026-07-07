@@ -139,11 +139,9 @@ This repo is prepared for GitHub with:
 - a smoke-test GitHub Actions workflow
 - `.gitignore` and `.gitattributes`
 - contribution and security docs
-- an explicit license placeholder
+- an MIT license
 - an upload checklist
-
-Before making the repo public, choose a real license and replace `LICENSE.md`.
 
 ## License
 
-No open-source license has been selected yet. See [LICENSE.md](LICENSE.md).
+This project is released under the [MIT License](LICENSE.md).

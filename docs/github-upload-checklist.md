@@ -9,11 +9,10 @@ Use this checklist before publishing the repository.
 - Confirm generated temporary files are not included.
 - Confirm `.github/workflows/smoke-test.yml` is present.
 - Choose whether the repository should be public or private.
+- Confirm `LICENSE.md` matches the intended license.
 
-## Required Before Public Release
+## Public Release Checks
 
-- Replace `LICENSE.md` with the selected license.
-- Replace the placeholder disclosure channel in `SECURITY.md`.
 - Confirm the README does not overstate autonomy or security guarantees.
 - Create an initial GitHub release or tag only after the smoke workflow passes.
 
