@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Human Approval",
+  "type": "object",
+  "required": ["id", "decision", "approver", "scope", "created_at"],
+  "properties": {
+    "id": { "type": "string" },
+    "decision": { "type": "string", "enum": ["approved", "rejected"] },
+    "approver": { "type": "string" },
+    "scope": { "type": "string" },
+    "reason": { "type": "string" },
+    "created_at": { "type": "string" },
+    "evidence": { "type": "string" }
+  },
+  "additionalProperties": true
+}

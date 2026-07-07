@@ -1,0 +1,8 @@
+{
+  "status": "inactive",
+  "owner": "Builder",
+  "scope": "{{CURRENT_PHASE}}",
+  "allowed_files": [],
+  "forbidden_files": [],
+  "updated_at": "{{CREATED_AT}}"
+}

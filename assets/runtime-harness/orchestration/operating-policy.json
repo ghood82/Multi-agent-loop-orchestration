@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "profile": "standard",
+  "description": "Project-level defaults for the orchestration operating system. Defaults preserve existing manual-flag behavior; turn gates on when the repo is ready.",
+  "gates": {
+    "require_watchdog_pass": true,
+    "require_latest_eval_pass": false,
+    "require_ci_pass": false,
+    "require_human_approval": false,
+    "strict_file_guard": false
+  },
+  "run_cycle": {
+    "release_gate": false,
+    "release_mode": "status",
+    "strict_gates": false,
+    "watch_ci": false,
+    "ci_required": false,
+    "remediate_on_gate_failure": false
+  },
+  "notes": [
+    "Recommended strict PR policy: require_watchdog_pass=true, require_latest_eval_pass=true, require_ci_pass=true, require_human_approval=true, strict_gates=true.",
+    "Only Builder should write production code unless a human explicitly authorizes otherwise."
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Orchestration Blocker",
+  "type": "object",
+  "required": ["id", "status", "severity", "owner", "description", "created_at"],
+  "properties": {
+    "id": { "type": "string" },
+    "status": { "type": "string", "enum": ["open", "resolved", "closed"] },
+    "severity": { "type": "string" },
+    "owner": { "type": "string" },
+    "description": { "type": "string" },
+    "created_at": { "type": "string" },
+    "evidence": { "type": "string" },
+    "resolved_at": { "type": "string" },
+    "resolution_evidence": { "type": "string" }
+  },
+  "additionalProperties": true
+}

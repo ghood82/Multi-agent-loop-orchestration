@@ -1,0 +1,50 @@
+{
+  "active_provider": "claude-code",
+  "default_timeout_seconds": 0,
+  "last_configured_at": "2026-07-01T20:51:39.830083+00:00",
+  "last_configured_provider": "claude-code",
+  "notes": [
+    "Default mode is auto: Codex CLI when installed, then Claude Code, then prompt-only.",
+    "Set AGENT_PROVIDER, AGENT_COMMAND, --provider, --command, or --argv to override automatic selection.",
+    "Adapter runs are recorded under orchestration/reports/agent-runs and state.json agent_runs."
+  ],
+  "providers": {
+    "auto": {
+      "description": "Automatically use Codex CLI when installed, then Claude Code, then prompt-only.",
+      "mode": "auto",
+      "priority": [
+        "codex-cli",
+        "claude-code",
+        "prompt-only"
+      ]
+    },
+    "claude-code": {
+      "command": "claude -p --model claude-fable-5 --effort xhigh",
+      "description": "Use a locally installed Claude Code command in non-interactive print mode. Override command if your CLI invocation differs.",
+      "mode": "command"
+    },
+    "codex-cli": {
+      "command": "codex exec",
+      "description": "Use a locally installed Codex CLI command. Override command if your CLI invocation differs.",
+      "mode": "command"
+    },
+    "codex-subagent": {
+      "description": "Prepare prompts for Codex Desktop or MCP subagent dispatch. Set command only if a local subagent CLI bridge exists.",
+      "mode": "prompt-only"
+    },
+    "command": {
+      "description": "Run AGENT_COMMAND or --command as argv parsed with shlex; prompt is sent on stdin.",
+      "mode": "command"
+    },
+    "custom-command": {
+      "command": "",
+      "description": "Operator-supplied command parsed with shlex; prompt is sent on stdin.",
+      "mode": "command"
+    },
+    "prompt-only": {
+      "description": "Prepare prompts and record adapter runs without invoking an external agent.",
+      "mode": "prompt-only"
+    }
+  },
+  "version": 1
+}

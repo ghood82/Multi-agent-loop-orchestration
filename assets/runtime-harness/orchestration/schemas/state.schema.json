@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Orchestration State",
+  "type": "object",
+  "required": ["project_name", "repo", "roadmap", "current_phase", "current_objective", "write_lock", "phase_gate", "daemon"],
+  "properties": {
+    "project_name": { "type": "string" },
+    "repo": { "type": "string" },
+    "roadmap": { "type": "string" },
+    "current_phase": { "type": "string" },
+    "current_objective": { "type": "string" },
+    "agent_adapter": {
+      "type": "object",
+      "properties": {
+        "last_provider": { "type": "string" },
+        "last_mode": { "type": "string" },
+        "last_role": { "type": "string" },
+        "last_exit_code": {},
+        "last_run_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "configured_provider": { "type": "string" },
+        "configured_mode": { "type": "string" },
+        "configured_command": { "type": "string" },
+        "configured_at": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "agent_runs": { "type": "array" },
+    "state_doc": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" },
+        "last_synced_at": { "type": "string" },
+        "sha256": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "write_lock": { "type": "object" },
+    "phase_gate": {
+      "type": "object",
+      "properties": {
+        "authorized_phase": { "type": "string" },
+        "unauthorized_phases": { "type": "array" },
+        "last_decision": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "blocking": { "type": "array" },
+        "warnings": { "type": "array" },
+        "next_phase_requires": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+    "open_blockers": { "type": "array" },
+    "resolved_blockers": { "type": "array" },
+    "stop_reports": { "type": "array" },
+    "last_stop_report": { "type": "string" },
+    "approval_requests": { "type": "array" },
+    "last_approval_request": { "type": "string" },
+    "human_approvals": { "type": "array" },
+    "eval_fixtures": { "type": "array" },
+    "last_eval_fixture": { "type": "string" },
+    "last_eval_fixture_report": { "type": "string" },
+    "eval_results": { "type": "array" },
+    "last_eval_result_artifact": { "type": "string" },
+    "last_eval_result_report": { "type": "string" },
+    "eval_quality_status": { "type": "string" },
+    "subagent_findings": { "type": "array" },
+    "subagent_runs": { "type": "array" },
+    "handoff_packets": { "type": "array" },
+    "last_handoff_packet": { "type": "string" },
+    "file_guard_checks": { "type": "array" },
+    "operating_policy": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" },
+        "profile": { "type": "string" },
+        "last_loaded_at": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "ci_status": {
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string" },
+        "source": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "conclusion": { "type": "string" },
+        "details": { "type": "string" },
+        "url": { "type": "string" },
+        "pr": { "type": "string" },
+        "required_only": { "type": "boolean" },
+        "counts": { "type": "object" },
+        "checks": { "type": "array" },
+        "error": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "structured_reports": { "type": "array" },
+    "release_gate": {
+      "type": "object",
+      "properties": {
+        "last_decision": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "mode": { "type": "string" },
+        "blocking": { "type": "array" },
+        "warnings": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+    "health_check": {
+      "type": "object",
+      "properties": {
+        "last_decision": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "failures": { "type": "array" },
+        "warnings": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+    "operator_status": {
+      "type": "object",
+      "properties": {
+        "last_decision": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "recommended_next_action": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "doctor": {
+      "type": "object",
+      "properties": {
+        "last_decision": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "summary": { "type": "string" },
+        "next_command": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "operating_dashboard": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" },
+        "last_rendered_at": { "type": "string" },
+        "sha256": { "type": "string" },
+        "status": { "type": "string" },
+        "last_report": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "ops_check": {
+      "type": "object",
+      "properties": {
+        "last_decision": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "failed_steps": { "type": "array" },
+        "recommended_next_action": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "policy_audit": {
+      "type": "object",
+      "properties": {
+        "last_decision": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "policy_profile": { "type": "string" },
+        "missing_evidence": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+    "acceptance_audit": {
+      "type": "object",
+      "properties": {
+        "last_decision": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "failures": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+    "requirements_matrix": {
+      "type": "object",
+      "properties": {
+        "last_decision": { "type": "string" },
+        "last_checked_at": { "type": "string" },
+        "last_report": { "type": "string" },
+        "requirements_total": { "type": "integer" },
+        "requirements_passed": { "type": "integer" },
+        "requirements_failed": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+    "setup_intake": {
+      "type": "object",
+      "properties": {
+        "last_completed_at": { "type": "string" },
+        "applied": { "type": "boolean" },
+        "policy_profile": { "type": "string" },
+        "blocker_mode": { "type": "string" },
+        "human_approval_required": { "type": "string" },
+        "command": { "type": "string" },
+        "ops_check_verdict": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "resume_plan": {
+      "type": "object",
+      "properties": {
+        "decision": { "type": "string" },
+        "next_role": { "type": "string" },
+        "next_action": { "type": "string" },
+        "reason": { "type": "string" },
+        "last_report": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "daemon": {
+      "type": "object",
+      "required": ["queue", "cursor", "status"],
+      "properties": {
+        "queue": { "type": "array", "items": { "type": "string" } },
+        "cursor": { "type": "integer" },
+        "status": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

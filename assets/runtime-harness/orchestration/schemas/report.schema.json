@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Orchestration Structured Report",
+  "type": "object",
+  "required": ["id", "role", "status", "created_at"],
+  "properties": {
+    "id": { "type": "string" },
+    "role": {
+      "type": "string",
+      "enum": ["builder", "qa", "security", "eval-builder", "eval", "watchdog", "remediation", "architect", "docs", "subagent", "agent-adapter", "doctor", "requirements-matrix", "release-gate", "phase-gate", "resume-plan", "health-check", "operator-status", "operating-dashboard", "ops-check", "policy-audit", "acceptance-audit", "state-doc-sync", "handoff-packet", "stop-report", "approval-request", "eval-fixture", "eval-result"]
+    },
+    "status": { "type": "string" },
+    "verdict": { "type": "string" },
+    "summary": { "type": "string" },
+    "evidence": { "type": "string" },
+    "created_at": { "type": "string" },
+    "source_report": { "type": "string" },
+    "exit_code": { "type": ["integer", "null"] },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "tests": { "type": "array", "items": { "type": "string" } },
+    "files": { "type": "array", "items": { "type": "string" } },
+    "risks": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

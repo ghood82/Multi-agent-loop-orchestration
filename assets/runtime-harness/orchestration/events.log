@@ -1,0 +1,7 @@
+{"ts":"{{CREATED_AT}}","event":"harness_initialized","project":"{{PROJECT_NAME}}","phase":"{{CURRENT_PHASE}}","note":"Runtime harness created from multi-agent-orchestration skill."}
+{"event": "configured", "note": "claude-code", "role": "configure-agent-provider", "ts": "2026-07-01T19:50:12.528551+00:00"}
+{"event": "completed", "note": "role=provider-smoke provider=claude-code resolved=claude-code exit=0", "role": "Agent Adapter", "ts": "2026-07-01T19:50:20.639494+00:00"}
+{"event": "completed", "note": "role=provider-smoke provider=claude-code resolved=claude-code exit=0", "role": "Agent Adapter", "ts": "2026-07-01T19:50:33.204279+00:00"}
+{"event": "configured", "note": "claude-code", "role": "configure-agent-provider", "ts": "2026-07-01T20:51:39.831240+00:00"}
+{"event": "completed", "note": "role=fable-xhigh-smoke provider=claude-code resolved=claude-code exit=0", "role": "Agent Adapter", "ts": "2026-07-01T20:51:47.058822+00:00"}
+{"event": "completed", "note": "role=fable-xhigh-smoke provider=claude-code resolved=claude-code exit=0", "role": "Agent Adapter", "ts": "2026-07-01T20:51:56.361659+00:00"}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Multi-Agent Orchestration"
+  short_description: "Set up controlled AI engineering loops"
+  default_prompt: "Use $multi-agent-orchestration to set up controlled multi-loop AI engineering orchestration for this project."

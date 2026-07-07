@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "default_mode": "read-only",
+  "subagents": [
+    {
+      "id": "qa-bug-hunter",
+      "name": "QA Bug Hunter",
+      "enabled": true,
+      "parent_roles": ["qa", "watchdog"],
+      "focus": "Bugs, regressions, edge cases, scope creep, and missing test coverage.",
+      "prompt": "Review the current branch/PR and orchestration state as a read-only QA specialist. Do not edit files. Report Verdict: PASS or REQUEST_FIXES, Summary, Files reviewed, Tests/checks run, Risks, and Required fixes."
+    },
+    {
+      "id": "security-privacy-reviewer",
+      "name": "Security Privacy Reviewer",
+      "enabled": true,
+      "parent_roles": ["security", "watchdog"],
+      "focus": "Auth, tenant isolation, sensitive logging, external API/model payloads, dependency/config risk, and data exposure.",
+      "prompt": "Review the current branch/PR and orchestration state as a read-only security and privacy specialist. Do not edit files. Report Verdict: PASS, REQUEST_FIXES, or STOP, Summary, Files reviewed, Security/privacy findings, Risks, and Required fixes."
+    },
+    {
+      "id": "eval-quality-reviewer",
+      "name": "Eval Quality Reviewer",
+      "enabled": true,
+      "parent_roles": ["eval-builder", "eval", "watchdog"],
+      "focus": "Behavior-level eval coverage, expected vs actual drift, wrong-domain examples, boundary cases, and user-visible classifications.",
+      "prompt": "Review eval fixtures, eval output, and changed behavior as a read-only eval specialist. Do not edit files. Report Verdict: PASS or REQUEST_FIXES, Summary, Tests/checks run, Eval gaps, Risks, and Required fixes."
+    },
+    {
+      "id": "process-drift-auditor",
+      "name": "Process Drift Auditor",
+      "enabled": true,
+      "parent_roles": ["architect", "watchdog", "docs"],
+      "focus": "Role boundaries, write-lock compliance, phase control, handoff completeness, state accuracy, and human approval gates.",
+      "prompt": "Review orchestration state, event log, reports, and git diff as a read-only process auditor. Do not edit files. Report Verdict: PASS, PROCESS_WARNING, REQUEST_FIXES, or STOP, Summary, Process drift findings, Risks, and Required fixes."
+    }
+  ]
+}

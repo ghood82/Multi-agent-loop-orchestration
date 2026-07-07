@@ -1,0 +1,290 @@
+{
+  "acceptance_audit": {
+    "failures": [],
+    "last_checked_at": "TBD",
+    "last_decision": "TBD",
+    "last_report": "TBD"
+  },
+  "active_branch": "TBD",
+  "active_pr": "TBD",
+  "active_writer": "Builder",
+  "agent_adapter": {
+    "configured_at": "2026-07-01T20:51:39.830083+00:00",
+    "configured_command": "claude -p --model claude-fable-5 --effort xhigh",
+    "configured_mode": "command",
+    "configured_provider": "claude-code",
+    "last_exit_code": 0,
+    "last_mode": "command",
+    "last_provider": "claude-code",
+    "last_report": "reports/agent-runs/20260701T205156359143Z-agent-adapter-fable-xhigh-smoke.json",
+    "last_resolved_provider": "claude-code",
+    "last_role": "fable-xhigh-smoke",
+    "last_run_at": "2026-07-01T20:51:56.358295+00:00"
+  },
+  "agent_runs": [
+    "reports/agent-runs/20260701T195020638283Z-agent-adapter-provider-smoke.json",
+    "reports/agent-runs/20260701T195033202791Z-agent-adapter-provider-smoke.json",
+    "reports/agent-runs/20260701T205147057650Z-agent-adapter-fable-xhigh-smoke.json",
+    "reports/agent-runs/20260701T205156359143Z-agent-adapter-fable-xhigh-smoke.json"
+  ],
+  "approval_requests": [],
+  "blocking_policy": {
+    "default_action": "Stop, summarize the blocker, recommend next action, and wait for human direction.",
+    "low_risk_recovery_allowed": true,
+    "mode": "stop-and-ask",
+    "recovery_limit": 1,
+    "stop_immediately_for": [
+      "security/privacy risk",
+      "schema migration",
+      "auth changes",
+      "external model behavior",
+      "preserved-component removal",
+      "API compatibility risk",
+      "product judgment",
+      "repeated test failures",
+      "process drift",
+      "unclear requirements"
+    ]
+  },
+  "ci_status": {
+    "checks": [],
+    "conclusion": "TBD",
+    "counts": {},
+    "details": "TBD",
+    "error": "",
+    "last_checked_at": "TBD",
+    "pr": "TBD",
+    "provider": "TBD",
+    "required_only": false,
+    "source": "TBD",
+    "url": "TBD"
+  },
+  "connected_tests": [],
+  "controlled_taxonomy": [],
+  "current_objective": "{{CURRENT_OBJECTIVE}}",
+  "current_phase": "{{CURRENT_PHASE}}",
+  "daemon": {
+    "cursor": 0,
+    "enabled": false,
+    "last_role": "TBD",
+    "last_run_at": "TBD",
+    "pause_on_blocker": true,
+    "queue": [
+      "builder",
+      "qa",
+      "security",
+      "eval-builder",
+      "eval",
+      "watchdog",
+      "architect",
+      "docs"
+    ],
+    "status": "idle"
+  },
+  "decision_policy": {
+    "high_risk": {
+      "default_action": "Human Product Owner approval required before action.",
+      "examples": [
+        "schema migration",
+        "auth/security behavior",
+        "external model behavior",
+        "user-facing verdict or classification semantics",
+        "preserved-component removal",
+        "production release",
+        "major PR merge"
+      ]
+    },
+    "last_decision": "TBD",
+    "last_report": "TBD",
+    "low_risk": {
+      "default_action": "System may decide and act autonomously after recording evidence.",
+      "examples": [
+        "docs-only correction",
+        "formatting or lint-only fix inside allowed files",
+        "rerun tests",
+        "refresh generated reports",
+        "resolve a clearly fixed low-risk blocker with evidence"
+      ]
+    },
+    "medium_risk": {
+      "confidence_threshold": 0.8,
+      "default_action": "Research first, record rationale and confidence, then proceed only when confidence meets threshold and no high-impact behavior changes are involved.",
+      "examples": [
+        "adding non-breaking regression coverage",
+        "small behavior fix inside the current phase",
+        "dependency/config update without sensitive-data or auth impact",
+        "scope clarification with limited product impact"
+      ]
+    }
+  },
+  "doctor": {
+    "last_checked_at": "TBD",
+    "last_decision": "TBD",
+    "last_report": "TBD",
+    "next_command": "TBD",
+    "summary": "TBD"
+  },
+  "eval_fixtures": [],
+  "eval_quality_status": "TBD",
+  "eval_results": [],
+  "file_guard_checks": [],
+  "forbidden_changes": [],
+  "handoff_packets": [],
+  "health_check": {
+    "failures": [],
+    "last_checked_at": "TBD",
+    "last_decision": "TBD",
+    "last_report": "TBD",
+    "warnings": []
+  },
+  "high_risk_areas": [],
+  "human_approval_required": true,
+  "human_approvals": [],
+  "known_risks": [],
+  "last_approval_request": "TBD",
+  "last_architect_decision": "TBD",
+  "last_builder_result": "TBD",
+  "last_documentation_update": "TBD",
+  "last_eval_builder_result": "TBD",
+  "last_eval_fixture": "TBD",
+  "last_eval_fixture_report": "TBD",
+  "last_eval_result": "TBD",
+  "last_eval_result_artifact": "TBD",
+  "last_eval_result_report": "TBD",
+  "last_handoff_packet": "TBD",
+  "last_qa_result": "TBD",
+  "last_remediation_result": "TBD",
+  "last_security_result": "TBD",
+  "last_stop_report": "TBD",
+  "last_watchdog_verdict": "TBD",
+  "next_authorized_action": "Architect assigns first Builder task",
+  "open_blockers": [],
+  "operating_dashboard": {
+    "last_rendered_at": "TBD",
+    "last_report": "TBD",
+    "path": "operating-dashboard.md",
+    "sha256": "TBD",
+    "status": "TBD"
+  },
+  "operating_policy": {
+    "last_loaded_at": "TBD",
+    "path": "operating-policy.json",
+    "profile": "standard"
+  },
+  "operator_status": {
+    "last_checked_at": "TBD",
+    "last_decision": "TBD",
+    "last_report": "TBD",
+    "recommended_next_action": "TBD"
+  },
+  "ops_check": {
+    "failed_steps": [],
+    "last_checked_at": "TBD",
+    "last_decision": "TBD",
+    "last_report": "TBD",
+    "recommended_next_action": "TBD"
+  },
+  "phase_gate": {
+    "authorized_phase": "{{CURRENT_PHASE}}",
+    "blocking": [],
+    "last_checked_at": "TBD",
+    "last_decision": "TBD",
+    "last_report": "TBD",
+    "next_phase_requires": [
+      "QA pass",
+      "Security pass when applicable",
+      "Eval pass",
+      "Architect decision",
+      "Human approval for high-impact behavior"
+    ],
+    "unauthorized_phases": [],
+    "warnings": []
+  },
+  "policy_audit": {
+    "last_checked_at": "TBD",
+    "last_decision": "TBD",
+    "last_report": "TBD",
+    "missing_evidence": [],
+    "policy_profile": "TBD"
+  },
+  "pr_diff_reports": [],
+  "preserved_components": [],
+  "process_drift_ledger": [],
+  "project_name": "{{PROJECT_NAME}}",
+  "quality_rubrics": [
+    "evals/rubrics/project-quality-rubric.md"
+  ],
+  "release_gate": {
+    "blocking": [],
+    "last_checked_at": "TBD",
+    "last_decision": "TBD",
+    "last_report": "TBD",
+    "mode": "TBD",
+    "warnings": []
+  },
+  "repo": "{{REPO_NAME}}",
+  "requirements_matrix": {
+    "last_checked_at": "TBD",
+    "last_decision": "TBD",
+    "last_report": "TBD",
+    "requirements_failed": 0,
+    "requirements_passed": 0,
+    "requirements_total": 0
+  },
+  "resolved_blockers": [],
+  "resume_plan": {
+    "decision": "TBD",
+    "last_report": "TBD",
+    "next_action": "TBD",
+    "next_role": "TBD",
+    "reason": "TBD"
+  },
+  "roadmap": "{{ROADMAP_NAME}}",
+  "setup_intake": {
+    "applied": false,
+    "blocker_mode": "TBD",
+    "command": "TBD",
+    "human_approval_required": "TBD",
+    "last_completed_at": "TBD",
+    "ops_check_verdict": "TBD",
+    "policy_profile": "TBD"
+  },
+  "state_doc": {
+    "last_synced_at": "TBD",
+    "path": "{{STATE_FILE_PATH}}",
+    "sha256": "TBD",
+    "status": "TBD"
+  },
+  "state_file_path": "{{STATE_FILE_PATH}}",
+  "stop_reports": [],
+  "structured_reports": [],
+  "subagent_findings": [],
+  "subagent_runs": [],
+  "test_command": "{{TEST_COMMAND}}",
+  "watchdog": {
+    "eval_quality_status": "TBD",
+    "last_verdict": "TBD",
+    "process_integrity_status": "TBD",
+    "product_quality_status": "TBD",
+    "required": true
+  },
+  "watchdog_evidence": {
+    "connected_tests": [],
+    "eval_fixtures": [],
+    "eval_results": [],
+    "last_prepared_at": "TBD",
+    "last_report": "TBD",
+    "last_verdict": "TBD",
+    "missing_evidence": [],
+    "pr_diff_report": "TBD",
+    "quality_rubric": "evals/rubrics/project-quality-rubric.md"
+  },
+  "worktrees": {},
+  "write_lock": {
+    "allowed_files": [],
+    "forbidden_files": [],
+    "owner": "Builder",
+    "scope": "{{CURRENT_PHASE}}",
+    "status": "inactive"
+  }
+}
