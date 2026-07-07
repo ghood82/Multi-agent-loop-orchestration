@@ -72,12 +72,12 @@ Acquire/adjust the production-code write lock through the orchestration harness,
 
 ## 4. The Builder acquires the write lock
 
-The lock lives in shared state, scoped to this phase:
+One command activates and scopes the lock (and keeps the state file and its lock
+mirror in sync). In the normal loop `run-builder.sh` does this automatically:
 
 ```console
-$ python3 orchestration/bin/update-state.py set write_lock.status active
-$ python3 orchestration/bin/update-state.py set write_lock.scope 'Phase 1: harden greet()'
-write lock is now active
+$ python3 orchestration/bin/write-lock.py acquire --owner Builder
+Write lock acquired by Builder (scope: Phase 1: harden greet(); allowed: src/**).
 ```
 
 ## 5. The same in-scope commit now passes

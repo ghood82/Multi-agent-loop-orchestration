@@ -294,6 +294,7 @@ orchestration/bin/normalize-report.py
 orchestration/bin/guard-files.py
 orchestration/bin/enforce-write-lock.py
 orchestration/bin/install-hooks.py
+orchestration/bin/write-lock.py
 orchestration/bin/release-gate.py
 orchestration/bin/resume-plan.py
 orchestration/bin/doctor.py
@@ -338,6 +339,14 @@ python3 orchestration/bin/install-hooks.py --check  # verify only
 ```
 
 The hook runs `enforce-write-lock.py`, which fails a commit that changes production code without an active, in-scope write lock (or that touches a forbidden/preserved path). Copy `orchestration/ci/write-lock-check.yml` into `.github/workflows/` for the pull-request layer.
+
+Manage the lock with `write-lock.py` (it keeps `state.json` and the `locks/production-code.lock` mirror in sync). `run-builder.sh` acquires it for Builder automatically at the start of a Builder run:
+
+```bash
+python3 orchestration/bin/write-lock.py acquire --owner Builder   # acquire, scoped to allowed_files
+python3 orchestration/bin/write-lock.py status                    # inspect + check mirror sync
+python3 orchestration/bin/write-lock.py release                   # release on handoff
+```
 
 Use `setup-intake.py` for the first human-friendly setup. It asks only for safety-relevant inputs: project identity, current phase/objective, allowed and forbidden files, preserved components, forbidden changes, high-risk areas, eval fixtures, blocker-handling mode, human approval policy, and operating-policy profile. It can print a configure command, apply the setup, and run the consolidated ops check:
 

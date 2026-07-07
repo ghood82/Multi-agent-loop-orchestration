@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
 POLICY_FILE = ROOT / "operating-policy.json"
+LOCK_FILE = ROOT / "locks" / "production-code.lock"
 
 
 def now() -> str:
@@ -59,6 +60,25 @@ def load_policy() -> dict[str, Any]:
 
 def save_policy(policy: dict[str, Any]) -> None:
     POLICY_FILE.write_text(json.dumps(policy, indent=2, sort_keys=True) + "\n")
+
+
+def mirror_lock_file(state: dict[str, Any]) -> None:
+    """Keep locks/production-code.lock in sync with state.json's write_lock.
+
+    The shell role runners read the lock file while enforce-write-lock.py reads
+    state.json; keeping them aligned prevents the two from disagreeing.
+    """
+    lock = state.get("write_lock", {}) if isinstance(state.get("write_lock"), dict) else {}
+    payload = {
+        "status": lock.get("status", "inactive"),
+        "owner": lock.get("owner", "Builder"),
+        "scope": lock.get("scope", ""),
+        "allowed_files": lock.get("allowed_files", []),
+        "forbidden_files": lock.get("forbidden_files", []),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    LOCK_FILE.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
 def log_event(event: str, note: str = "") -> None:
@@ -285,6 +305,7 @@ def configure(args: argparse.Namespace) -> dict[str, Any]:
     state["operating_policy"]["profile"] = policy.get("profile", "standard")
     save_policy(policy)
     save_state(state)
+    mirror_lock_file(state)
     log_event("configured", state.get("project_name", "TBD"))
     maybe_run_sync_state_doc(args)
     return load_state()

@@ -251,13 +251,20 @@ python3 orchestration/bin/install-hooks.py --check    # verify, write nothing
 
 The hook preserves any pre-existing pre-commit hook as `pre-commit.local` and chains to it. Bypass in an emergency with `ORCH_ALLOW_LOCK_OVERRIDE=1 git commit ...` (reported loudly) or `git commit --no-verify`.
 
-Acquire and scope the lock when the Builder starts a task, and release it on handoff:
+Manage the lock with `write-lock.py`, which keeps `state.json` and the
+`locks/production-code.lock` mirror in sync:
 
 ```bash
-python3 orchestration/bin/configure-project.py --allowed-file "src/**"   # what Builder may touch
-python3 orchestration/bin/update-state.py set write_lock.status active    # acquire
-python3 orchestration/bin/update-state.py set write_lock.status inactive  # release on handoff
+python3 orchestration/bin/configure-project.py --allowed-file "src/**"  # what Builder may touch
+python3 orchestration/bin/write-lock.py acquire --owner Builder          # acquire (scoped to allowed_files)
+python3 orchestration/bin/write-lock.py status                          # inspect, and check the mirror is in sync
+python3 orchestration/bin/write-lock.py release                         # release on handoff
 ```
+
+`run-builder.sh` acquires the lock for Builder automatically at the start of a
+Builder run (and refuses to run if another loop holds it), so in the normal loop
+you rarely call `acquire` by hand. Acquiring another loop's active lock requires
+`--force`.
 
 Check changes directly:
 

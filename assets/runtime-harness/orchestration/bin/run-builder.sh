@@ -11,6 +11,11 @@ if [[ "$lock_status" == "active" && "$lock_owner" != "Builder" ]]; then
   exit 2
 fi
 
+# Acquire the production-code write lock for Builder (scoped to the configured
+# allowed_files) so the pre-commit enforcement lets authorized edits through.
+# Release it on handoff with: python3 orchestration/bin/write-lock.py release
+python3 "${ROOT_DIR}/bin/write-lock.py" acquire --owner Builder >/dev/null
+
 prompt_file="${PROMPT_DIR}/builder.md"
 cat > "$prompt_file" <<EOF
 You are the Builder loop for $(json_value project_name).
