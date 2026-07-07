@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -87,22 +86,60 @@ def build_steps(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     bin_dir = ROOT / "bin"
     steps: list[tuple[str, list[str]]] = [
         ("health-check", [sys.executable, str(bin_dir / "health-check.py"), "--write-report"]),
-        ("policy-audit", [sys.executable, str(bin_dir / "policy-audit.py"), "--write-report", "--json"]),
-        ("phase-gate", [sys.executable, str(bin_dir / "phase-gate.py"), "--write-report", "--json"]),
+        (
+            "policy-audit",
+            [sys.executable, str(bin_dir / "policy-audit.py"), "--write-report", "--json"],
+        ),
+        (
+            "phase-gate",
+            [sys.executable, str(bin_dir / "phase-gate.py"), "--write-report", "--json"],
+        ),
     ]
     if not args.skip_release_gate:
         steps.append(
-            ("release-gate", [sys.executable, str(bin_dir / "release-gate.py"), "--mode", args.release_mode])
+            (
+                "release-gate",
+                [sys.executable, str(bin_dir / "release-gate.py"), "--mode", args.release_mode],
+            )
         )
     steps.extend(
         [
-            ("operator-status", [sys.executable, str(bin_dir / "status.py"), "--write-report", "--json", "--events", str(args.events)]),
-            ("state-doc-sync", [sys.executable, str(bin_dir / "sync-state-doc.py"), "--write-report", "--json"]),
-            ("operating-dashboard", [sys.executable, str(bin_dir / "operating-dashboard.py"), "--write-report", "--json", "--events", str(args.events)]),
+            (
+                "operator-status",
+                [
+                    sys.executable,
+                    str(bin_dir / "status.py"),
+                    "--write-report",
+                    "--json",
+                    "--events",
+                    str(args.events),
+                ],
+            ),
+            (
+                "state-doc-sync",
+                [sys.executable, str(bin_dir / "sync-state-doc.py"), "--write-report", "--json"],
+            ),
+            (
+                "operating-dashboard",
+                [
+                    sys.executable,
+                    str(bin_dir / "operating-dashboard.py"),
+                    "--write-report",
+                    "--json",
+                    "--events",
+                    str(args.events),
+                ],
+            ),
         ]
     )
     if args.include_acceptance_audit:
-        steps.insert(1, ("acceptance-audit", [sys.executable, str(bin_dir / "acceptance-audit.py"), "--write-report"]))
+        steps.insert(
+            1,
+            (
+                "acceptance-audit",
+                [sys.executable, str(bin_dir / "acceptance-audit.py"), "--write-report"],
+            ),
+        )
     return steps
 
 
@@ -114,7 +151,9 @@ def build_report(args: argparse.Namespace, steps: list[dict[str, Any]]) -> dict[
         "role": "ops-check",
         "status": "completed",
         "verdict": verdict,
-        "summary": "Ops check passed." if verdict == "PASS" else f"Ops check failed: {', '.join(step['name'] for step in failed)}.",
+        "summary": "Ops check passed."
+        if verdict == "PASS"
+        else f"Ops check failed: {', '.join(step['name'] for step in failed)}.",
         "created_at": now(),
         "release_mode": args.release_mode,
         "steps": [
@@ -129,8 +168,9 @@ def build_report(args: argparse.Namespace, steps: list[dict[str, Any]]) -> dict[
         ],
         "failed_steps": [step["name"] for step in failed],
         "recommended_next_action": (
-            "Continue with the next authorized action." if verdict == "PASS" else
-            f"Resolve failed checks: {', '.join(step['name'] for step in failed)}."
+            "Continue with the next authorized action."
+            if verdict == "PASS"
+            else f"Resolve failed checks: {', '.join(step['name'] for step in failed)}."
         ),
     }
 
@@ -164,12 +204,16 @@ def print_text(report: dict[str, Any], report_path: Path | None) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--release-mode", choices=["status", "pr", "merge", "release"], default="status")
+    parser.add_argument(
+        "--release-mode", choices=["status", "pr", "merge", "release"], default="status"
+    )
     parser.add_argument("--skip-release-gate", action="store_true")
     parser.add_argument("--include-acceptance-audit", action="store_true")
     parser.add_argument("--events", type=int, default=5)
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--strict", action="store_true", help="Return nonzero unless every step passes.")
+    parser.add_argument(
+        "--strict", action="store_true", help="Return nonzero unless every step passes."
+    )
     return parser.parse_args()
 
 

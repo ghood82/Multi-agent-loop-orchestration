@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -42,7 +41,9 @@ def load_state() -> dict[str, Any]:
 
 
 def load_policy(args: argparse.Namespace, state: dict[str, Any]) -> tuple[dict[str, Any], Path]:
-    configured = state.get("operating_policy") if isinstance(state.get("operating_policy"), dict) else {}
+    configured = (
+        state.get("operating_policy") if isinstance(state.get("operating_policy"), dict) else {}
+    )
     policy_path = Path(args.policy or configured.get("path") or "operating-policy.json")
     if not policy_path.is_absolute():
         policy_path = ROOT / policy_path
@@ -66,13 +67,18 @@ def open_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
 def latest_watchdog(state: dict[str, Any]) -> str:
     watchdog = state.get("watchdog") if isinstance(state.get("watchdog"), dict) else {}
-    return str(watchdog.get("last_verdict") or state.get("last_watchdog_verdict") or "").strip().upper()
+    return (
+        str(watchdog.get("last_verdict") or state.get("last_watchdog_verdict") or "")
+        .strip()
+        .upper()
+    )
 
 
 def latest_eval(state: dict[str, Any]) -> str:
@@ -142,7 +148,9 @@ def classify_policy(policy: dict[str, Any]) -> str:
     return "strict" if any(strict_signals) else "standard"
 
 
-def check_gate(name: str, required: bool, passed: bool, evidence: str, missing: str) -> dict[str, Any]:
+def check_gate(
+    name: str, required: bool, passed: bool, evidence: str, missing: str
+) -> dict[str, Any]:
     if not required:
         status = "NOT_REQUIRED"
     elif passed:
@@ -226,7 +234,9 @@ def build_audit(state: dict[str, Any], policy: dict[str, Any], policy_path: Path
         "verdict": verdict,
         "summary": f"Operating policy audit {verdict} for profile {mode}.",
         "created_at": now(),
-        "policy_path": str(policy_path.relative_to(ROOT)) if policy_path.is_relative_to(ROOT) else str(policy_path),
+        "policy_path": str(policy_path.relative_to(ROOT))
+        if policy_path.is_relative_to(ROOT)
+        else str(policy_path),
         "policy_profile": mode,
         "gates": gates,
         "run_cycle": run_cycle,
@@ -270,10 +280,16 @@ def print_text(report: dict[str, Any]) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--policy", default="", help="Policy path. Defaults to state.operating_policy.path or operating-policy.json.")
+    parser.add_argument(
+        "--policy",
+        default="",
+        help="Policy path. Defaults to state.operating_policy.path or operating-policy.json.",
+    )
     parser.add_argument("--write-report", action="store_true")
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--strict", action="store_true", help="Return nonzero unless policy audit verdict is PASS.")
+    parser.add_argument(
+        "--strict", action="store_true", help="Return nonzero unless policy audit verdict is PASS."
+    )
     return parser.parse_args()
 
 

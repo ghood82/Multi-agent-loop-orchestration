@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -132,7 +131,9 @@ def create_request(args: argparse.Namespace) -> tuple[dict[str, Any], Path, Path
     rel_json = str(json_path.relative_to(ROOT))
     state.setdefault("approval_requests", []).append(rel_json)
     state["last_approval_request"] = rel_json
-    state["next_authorized_action"] = args.next_authorized_action or f"Human decision required for: {args.scope}"
+    state["next_authorized_action"] = (
+        args.next_authorized_action or f"Human decision required for: {args.scope}"
+    )
 
     report = {
         "id": f"{compact_ts()}-approval-request",
@@ -175,7 +176,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--risk", action="append", default=[])
     parser.add_argument("--option", action="append", default=[])
     parser.add_argument("--recommendation", default="")
-    parser.add_argument("--human-decision-needed", default="yes", choices=["yes", "no", "true", "false"])
+    parser.add_argument(
+        "--human-decision-needed", default="yes", choices=["yes", "no", "true", "false"]
+    )
     parser.add_argument("--next-authorized-action", default="")
     parser.add_argument("--open-blocker", action="store_true")
     parser.add_argument("--severity", default="high")
@@ -187,7 +190,13 @@ def main() -> int:
     args = parse_args()
     request, markdown_path, json_path = create_request(args)
     if args.json:
-        print(json.dumps({"request": request, "markdown": str(markdown_path), "json": str(json_path)}, indent=2, sort_keys=True))
+        print(
+            json.dumps(
+                {"request": request, "markdown": str(markdown_path), "json": str(json_path)},
+                indent=2,
+                sort_keys=True,
+            )
+        )
     else:
         print(markdown_path)
     return 0

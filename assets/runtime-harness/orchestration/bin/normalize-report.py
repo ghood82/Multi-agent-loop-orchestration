@@ -15,7 +15,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -218,7 +217,9 @@ def capture_section_items(text: str, headings: list[str]) -> list[str]:
 
     start = match.end()
     rest = text[start:]
-    next_heading = re.search(r"^\s*(?:#{1,6}\s+\S|[A-Za-z][A-Za-z /_-]{1,60}:\s*$)", rest, re.MULTILINE)
+    next_heading = re.search(
+        r"^\s*(?:#{1,6}\s+\S|[A-Za-z][A-Za-z /_-]{1,60}:\s*$)", rest, re.MULTILINE
+    )
     section = rest[: next_heading.start()] if next_heading else rest
     items: list[str] = []
     for line in section.splitlines():
@@ -246,7 +247,10 @@ def blocker_exists(state: dict[str, Any], description: str, source_report: str) 
     for blocker in state.get("open_blockers", []) or []:
         if not isinstance(blocker, dict):
             continue
-        if blocker.get("description") == description and blocker.get("source_report") == source_report:
+        if (
+            blocker.get("description") == description
+            and blocker.get("source_report") == source_report
+        ):
             return True
     return False
 
@@ -279,7 +283,9 @@ def normalize_report(path: Path, role_override: str = "") -> dict[str, Any]:
     verdict = detect_verdict(text)
     status = detect_status(text, verdict)
     rel_source = str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)
-    blockers = capture_section_items(text, ["Open blockers", "Blockers", "Required fixes", "Stop reason"])
+    blockers = capture_section_items(
+        text, ["Open blockers", "Blockers", "Required fixes", "Stop reason"]
+    )
     tests = capture_section_items(text, ["Tests run", "Tests/checks run", "Checks run"])
     files = capture_section_items(text, ["Files changed", "Files involved", "Files reviewed"])
     risks = capture_section_items(text, ["Risks", "Regression risks", "Security/privacy findings"])
@@ -314,7 +320,9 @@ def write_report(report: dict[str, Any]) -> Path:
     return path
 
 
-def apply_report_to_state(state: dict[str, Any], report: dict[str, Any], report_path: Path, open_blockers: bool) -> None:
+def apply_report_to_state(
+    state: dict[str, Any], report: dict[str, Any], report_path: Path, open_blockers: bool
+) -> None:
     rel_report = str(report_path.relative_to(ROOT))
     if rel_report not in state.setdefault("structured_reports", []):
         state["structured_reports"].append(rel_report)
@@ -324,7 +332,9 @@ def apply_report_to_state(state: dict[str, Any], report: dict[str, Any], report_
     if field:
         state[field] = report.get("verdict") or report.get("status") or "observed"
     if role == "watchdog":
-        state.setdefault("watchdog", {})["last_verdict"] = report.get("verdict") or report.get("status")
+        state.setdefault("watchdog", {})["last_verdict"] = report.get("verdict") or report.get(
+            "status"
+        )
 
     if not open_blockers:
         return

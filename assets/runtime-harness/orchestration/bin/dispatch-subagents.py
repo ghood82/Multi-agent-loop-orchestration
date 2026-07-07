@@ -10,13 +10,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
 DEFAULT_MANIFEST = ROOT / "subagents" / "manifest.json"
 
-NEGATIVE_VERDICTS = {"BLOCKED", "FAIL", "FAILED", "REQUEST_FIXES", "REQUEST_CHANGES", "PROCESS_WARNING", "STOP"}
+NEGATIVE_VERDICTS = {
+    "BLOCKED",
+    "FAIL",
+    "FAILED",
+    "REQUEST_FIXES",
+    "REQUEST_CHANGES",
+    "PROCESS_WARNING",
+    "STOP",
+}
 
 
 def now() -> str:
@@ -29,14 +36,34 @@ def compact_ts() -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Dispatch read-only orchestration subagents.")
-    parser.add_argument("--role", required=True, help="Parent loop role requesting specialist review.")
+    parser.add_argument(
+        "--role", required=True, help="Parent loop role requesting specialist review."
+    )
     parser.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
-    parser.add_argument("--agent-command", default="", help="Provider command passed to agent-adapter.py.")
-    parser.add_argument("--agent-id", action="append", default=[], help="Run only this subagent id. Repeatable.")
-    parser.add_argument("--open-blockers", action="store_true", help="Open blockers for explicit negative subagent verdicts/findings.")
-    parser.add_argument("--fail-on-negative", action="store_true", help="Exit non-zero if any subagent returns a negative verdict.")
-    parser.add_argument("--disable-file-guard", action="store_true", help="Disable subagent read-only file guard.")
-    parser.add_argument("--no-file-guard-blocker", action="store_true", help="Do not open blockers for subagent file guard violations.")
+    parser.add_argument(
+        "--agent-command", default="", help="Provider command passed to agent-adapter.py."
+    )
+    parser.add_argument(
+        "--agent-id", action="append", default=[], help="Run only this subagent id. Repeatable."
+    )
+    parser.add_argument(
+        "--open-blockers",
+        action="store_true",
+        help="Open blockers for explicit negative subagent verdicts/findings.",
+    )
+    parser.add_argument(
+        "--fail-on-negative",
+        action="store_true",
+        help="Exit non-zero if any subagent returns a negative verdict.",
+    )
+    parser.add_argument(
+        "--disable-file-guard", action="store_true", help="Disable subagent read-only file guard."
+    )
+    parser.add_argument(
+        "--no-file-guard-blocker",
+        action="store_true",
+        help="Do not open blockers for subagent file guard violations.",
+    )
     return parser.parse_args()
 
 
@@ -67,7 +94,9 @@ def log_event(role: str, event: str, note: str = "") -> None:
         handle.write(json.dumps(entry, sort_keys=True) + "\n")
 
 
-def select_subagents(manifest: dict[str, Any], role: str, agent_ids: list[str]) -> list[dict[str, Any]]:
+def select_subagents(
+    manifest: dict[str, Any], role: str, agent_ids: list[str]
+) -> list[dict[str, Any]]:
     selected = []
     requested = set(agent_ids)
     for subagent in manifest.get("subagents", []):
@@ -110,11 +139,11 @@ def state_snapshot(state: dict[str, Any]) -> str:
 
 
 def build_prompt(parent_role: str, subagent: dict[str, Any], state: dict[str, Any]) -> str:
-    return f"""You are {subagent.get('name', subagent.get('id'))}, a read-only specialist subagent.
+    return f"""You are {subagent.get("name", subagent.get("id"))}, a read-only specialist subagent.
 
 Parent loop: {parent_role}
 Mode: read-only
-Focus: {subagent.get('focus', 'Specialist review')}
+Focus: {subagent.get("focus", "Specialist review")}
 
 Rules:
 - Do not edit production code, test files, docs, state, lock files, or git history.
@@ -137,7 +166,7 @@ Project state snapshot:
 ```
 
 Specialist assignment:
-{subagent.get('prompt', '')}
+{subagent.get("prompt", "")}
 """
 
 
@@ -177,7 +206,9 @@ def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
 def guard_snapshot(actor: str, enabled: bool) -> Path | None:
     if not enabled:
         return None
-    result = run_command(["python3", str(ROOT / "bin" / "guard-files.py"), "snapshot", "--role", actor])
+    result = run_command(
+        ["python3", str(ROOT / "bin" / "guard-files.py"), "snapshot", "--role", actor]
+    )
     if result.returncode != 0:
         raise SystemExit(f"Subagent file guard snapshot failed for {actor}:\n{result.stdout}")
     lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
@@ -217,7 +248,9 @@ def normalize_subagent_report(report_path: Path, open_blockers: bool) -> tuple[s
     if open_blockers:
         command.append("--open-blockers")
     command.append(str(report_path))
-    result = subprocess.run(command, cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+    result = subprocess.run(
+        command, cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False
+    )
     if result.returncode != 0:
         raise SystemExit(f"Subagent report normalization failed:\n{result.stdout}")
 
@@ -283,7 +316,11 @@ def main() -> int:
         file_guard_violation = file_guard_violation or file_guard_negative
         any_negative = any_negative or negative or file_guard_negative or exit_code != 0
         created_reports.append(str(report_path.relative_to(ROOT)))
-        log_event("Subagent", "completed", f"{subagent_id} parent={args.role} verdict={verdict or 'missing'} exit={exit_code}")
+        log_event(
+            "Subagent",
+            "completed",
+            f"{subagent_id} parent={args.role} verdict={verdict or 'missing'} exit={exit_code}",
+        )
 
     state = load_state()
     state.setdefault("subagent_runs", []).append(

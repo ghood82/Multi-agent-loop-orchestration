@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 
@@ -187,8 +186,13 @@ def check_roles(state: dict[str, Any]) -> dict[str, Any]:
     queue = daemon.get("queue") or []
     missing = [role for role in REQUIRED_ROLES if role not in queue]
     if missing:
-        return fail("role sequence", "daemon.queue must include the required orchestration loops.", missing)
-    return ok("role sequence", "Daemon queue includes Builder, QA, Security, Eval Builder, Eval, Watchdog, Architect, and Docs.")
+        return fail(
+            "role sequence", "daemon.queue must include the required orchestration loops.", missing
+        )
+    return ok(
+        "role sequence",
+        "Daemon queue includes Builder, QA, Security, Eval Builder, Eval, Watchdog, Architect, and Docs.",
+    )
 
 
 def check_write_lock(state: dict[str, Any]) -> dict[str, Any]:
@@ -202,8 +206,14 @@ def check_write_lock(state: dict[str, Any]) -> dict[str, Any]:
     if "forbidden_files" not in write_lock:
         missing.append("write_lock.forbidden_files")
     if missing:
-        return fail("single-writer lock", "Builder must own production-code write authority by default.", missing)
-    return ok("single-writer lock", "Builder owns the default write lock and file scopes are represented.")
+        return fail(
+            "single-writer lock",
+            "Builder must own production-code write authority by default.",
+            missing,
+        )
+    return ok(
+        "single-writer lock", "Builder owns the default write lock and file scopes are represented."
+    )
 
 
 def check_blocking_policy(state: dict[str, Any]) -> dict[str, Any]:
@@ -212,7 +222,10 @@ def check_blocking_policy(state: dict[str, Any]) -> dict[str, Any]:
     missing = [reason for reason in REQUIRED_STOP_REASONS if reason not in stop_reasons]
     if missing:
         return fail("blocking policy", "Global stop conditions must be encoded in state.", missing)
-    return ok("blocking policy", "Global stop conditions are encoded in blocking_policy.stop_immediately_for.")
+    return ok(
+        "blocking policy",
+        "Global stop conditions are encoded in blocking_policy.stop_immediately_for.",
+    )
 
 
 def check_gates(state: dict[str, Any]) -> dict[str, Any]:
@@ -227,7 +240,11 @@ def check_gates(state: dict[str, Any]) -> dict[str, Any]:
     if "ci_status" not in state:
         missing.append("ci_status")
     if missing:
-        return fail("gate contract", "Watchdog, release, CI, and human approval gates must be represented.", missing)
+        return fail(
+            "gate contract",
+            "Watchdog, release, CI, and human approval gates must be represented.",
+            missing,
+        )
     return ok("gate contract", "Watchdog, release, CI, and human approval gates are represented.")
 
 
@@ -239,7 +256,9 @@ def check_docs() -> dict[str, Any]:
     text = "\n".join(docs).lower()
     missing = [phrase for phrase in REQUIRED_DOC_PHRASES if phrase.lower() not in text]
     if missing:
-        return fail("operator documentation", "Skill docs must explain core operating concepts.", missing)
+        return fail(
+            "operator documentation", "Skill docs must explain core operating concepts.", missing
+        )
     return ok("operator documentation", "README/SKILL docs cover core operating concepts.")
 
 
@@ -298,7 +317,9 @@ def print_summary(report: dict[str, Any], report_path: Path | None) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--write-report", action="store_true", help="Write audit report and update state.json.")
+    parser.add_argument(
+        "--write-report", action="store_true", help="Write audit report and update state.json."
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON instead of a text summary.")
     return parser.parse_args()
 

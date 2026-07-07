@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -40,9 +39,19 @@ def compact_ts() -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Create a deterministic resume plan.")
-    parser.add_argument("--apply", action="store_true", help="Update state.json with next_authorized_action and daemon cursor/status.")
-    parser.add_argument("--prefer-remediation", action="store_true", help="Prefer remediation over pause when blockers exist.")
-    parser.add_argument("--write-report", action="store_true", help="Write a structured resume-plan report.")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Update state.json with next_authorized_action and daemon cursor/status.",
+    )
+    parser.add_argument(
+        "--prefer-remediation",
+        action="store_true",
+        help="Prefer remediation over pause when blockers exist.",
+    )
+    parser.add_argument(
+        "--write-report", action="store_true", help="Write a structured resume-plan report."
+    )
     return parser.parse_args()
 
 
@@ -70,7 +79,8 @@ def open_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
@@ -255,7 +265,9 @@ def write_report(resume_plan: dict[str, Any]) -> Path:
     return path
 
 
-def apply_plan(state: dict[str, Any], resume_plan: dict[str, Any], report_path: Path | None) -> None:
+def apply_plan(
+    state: dict[str, Any], resume_plan: dict[str, Any], report_path: Path | None
+) -> None:
     state["resume_plan"] = resume_plan
     state["next_authorized_action"] = resume_plan["next_action"]
     if report_path:

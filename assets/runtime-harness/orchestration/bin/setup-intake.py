@@ -12,7 +12,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -120,39 +119,98 @@ def split_csv(value: str) -> list[str]:
 def collect(args: argparse.Namespace) -> dict[str, Any]:
     state = load_state()
     repo_default = state.get("repo") or ROOT.parent.name
-    profile_default = args.policy_profile or state.get("operating_policy", {}).get("profile", "standard")
+    profile_default = args.policy_profile or state.get("operating_policy", {}).get(
+        "profile", "standard"
+    )
     if profile_default not in PROFILE_DEFAULTS:
         profile_default = "standard"
 
     data: dict[str, Any] = {
-        "project_name": args.project_name or prompt_value("Project name", state.get("project_name", "TBD"), non_interactive=args.non_interactive),
-        "repo_name": args.repo_name or prompt_value("Repo name", str(repo_default), non_interactive=args.non_interactive),
-        "roadmap_name": args.roadmap_name or prompt_value("Roadmap name", state.get("roadmap", "TBD"), non_interactive=args.non_interactive),
-        "current_phase": args.current_phase or prompt_value("Current phase", state.get("current_phase", "TBD"), non_interactive=args.non_interactive),
-        "current_objective": args.current_objective or prompt_value("Current objective", state.get("current_objective", "TBD"), non_interactive=args.non_interactive),
-        "state_file_path": args.state_file_path or prompt_value("Shared state file path", state.get("state_file_path", "docs/project-roadmap-state.md"), non_interactive=args.non_interactive),
-        "test_command": args.test_command or prompt_value("Primary test command", state.get("test_command", "TBD"), non_interactive=args.non_interactive),
-        "active_branch": args.active_branch or prompt_value("Active branch", state.get("active_branch", "TBD"), non_interactive=args.non_interactive),
-        "active_pr": args.active_pr or prompt_value("Active PR", state.get("active_pr", "TBD"), non_interactive=args.non_interactive),
-        "blocker_mode": args.blocker_mode or prompt_value("Blocker handling mode", state.get("blocking_policy", {}).get("mode", "stop-and-ask"), non_interactive=args.non_interactive),
+        "project_name": args.project_name
+        or prompt_value(
+            "Project name", state.get("project_name", "TBD"), non_interactive=args.non_interactive
+        ),
+        "repo_name": args.repo_name
+        or prompt_value("Repo name", str(repo_default), non_interactive=args.non_interactive),
+        "roadmap_name": args.roadmap_name
+        or prompt_value(
+            "Roadmap name", state.get("roadmap", "TBD"), non_interactive=args.non_interactive
+        ),
+        "current_phase": args.current_phase
+        or prompt_value(
+            "Current phase", state.get("current_phase", "TBD"), non_interactive=args.non_interactive
+        ),
+        "current_objective": args.current_objective
+        or prompt_value(
+            "Current objective",
+            state.get("current_objective", "TBD"),
+            non_interactive=args.non_interactive,
+        ),
+        "state_file_path": args.state_file_path
+        or prompt_value(
+            "Shared state file path",
+            state.get("state_file_path", "docs/project-roadmap-state.md"),
+            non_interactive=args.non_interactive,
+        ),
+        "test_command": args.test_command
+        or prompt_value(
+            "Primary test command",
+            state.get("test_command", "TBD"),
+            non_interactive=args.non_interactive,
+        ),
+        "active_branch": args.active_branch
+        or prompt_value(
+            "Active branch", state.get("active_branch", "TBD"), non_interactive=args.non_interactive
+        ),
+        "active_pr": args.active_pr
+        or prompt_value(
+            "Active PR", state.get("active_pr", "TBD"), non_interactive=args.non_interactive
+        ),
+        "blocker_mode": args.blocker_mode
+        or prompt_value(
+            "Blocker handling mode",
+            state.get("blocking_policy", {}).get("mode", "stop-and-ask"),
+            non_interactive=args.non_interactive,
+        ),
         "blocker_recovery_limit": args.blocker_recovery_limit,
         "human_approval_required": args.human_approval_required,
         "policy_profile": profile_default,
-        "agent_provider": args.agent_provider or prompt_value("Agent provider", state.get("agent_adapter", {}).get("configured_provider", "auto"), non_interactive=args.non_interactive),
-        "agent_command": args.agent_command or prompt_value("Agent command override", "", non_interactive=args.non_interactive),
-        "decision_policy_profile": args.decision_policy_profile or prompt_value("Decision policy profile", state.get("decision_policy", {}).get("profile", "risk-bucketed"), non_interactive=args.non_interactive),
+        "agent_provider": args.agent_provider
+        or prompt_value(
+            "Agent provider",
+            state.get("agent_adapter", {}).get("configured_provider", "auto"),
+            non_interactive=args.non_interactive,
+        ),
+        "agent_command": args.agent_command
+        or prompt_value("Agent command override", "", non_interactive=args.non_interactive),
+        "decision_policy_profile": args.decision_policy_profile
+        or prompt_value(
+            "Decision policy profile",
+            state.get("decision_policy", {}).get("profile", "risk-bucketed"),
+            non_interactive=args.non_interactive,
+        ),
     }
 
     if data["blocker_mode"] not in BLOCKER_MODES:
-        raise SystemExit(f"Unsupported blocker mode: {data['blocker_mode']}. Choose one of: {', '.join(BLOCKER_MODES)}")
+        raise SystemExit(
+            f"Unsupported blocker mode: {data['blocker_mode']}. Choose one of: {', '.join(BLOCKER_MODES)}"
+        )
     if data["agent_provider"] not in AGENT_PROVIDERS:
-        raise SystemExit(f"Unsupported agent provider: {data['agent_provider']}. Choose one of: {', '.join(AGENT_PROVIDERS)}")
+        raise SystemExit(
+            f"Unsupported agent provider: {data['agent_provider']}. Choose one of: {', '.join(AGENT_PROVIDERS)}"
+        )
     if data["decision_policy_profile"] not in DECISION_POLICY_PROFILES:
-        raise SystemExit(f"Unsupported decision policy profile: {data['decision_policy_profile']}. Choose one of: {', '.join(DECISION_POLICY_PROFILES)}")
+        raise SystemExit(
+            f"Unsupported decision policy profile: {data['decision_policy_profile']}. Choose one of: {', '.join(DECISION_POLICY_PROFILES)}"
+        )
 
     if data["blocker_recovery_limit"] is None:
         default_limit = str(state.get("blocking_policy", {}).get("recovery_limit", 1))
-        limit = prompt_value("Low-risk blocker recovery attempts", default_limit, non_interactive=args.non_interactive)
+        limit = prompt_value(
+            "Low-risk blocker recovery attempts",
+            default_limit,
+            non_interactive=args.non_interactive,
+        )
         try:
             data["blocker_recovery_limit"] = int(limit)
         except ValueError as exc:
@@ -160,12 +218,24 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
 
     if data["human_approval_required"] is None:
         default_human = bool(state.get("human_approval_required", True))
-        data["human_approval_required"] = "true" if prompt_bool("Require human approval for high-impact decisions", default_human, non_interactive=args.non_interactive) else "false"
+        data["human_approval_required"] = (
+            "true"
+            if prompt_bool(
+                "Require human approval for high-impact decisions",
+                default_human,
+                non_interactive=args.non_interactive,
+            )
+            else "false"
+        )
 
     if not args.policy_profile:
-        selected = prompt_value("Operating policy profile", profile_default, non_interactive=args.non_interactive)
+        selected = prompt_value(
+            "Operating policy profile", profile_default, non_interactive=args.non_interactive
+        )
         if selected not in PROFILE_DEFAULTS:
-            raise SystemExit(f"Unsupported policy profile: {selected}. Choose one of: {', '.join(PROFILE_DEFAULTS)}")
+            raise SystemExit(
+                f"Unsupported policy profile: {selected}. Choose one of: {', '.join(PROFILE_DEFAULTS)}"
+            )
         data["policy_profile"] = selected
 
     list_defaults = {
@@ -185,7 +255,11 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
             continue
         default = ", ".join(str(item) for item in existing) if isinstance(existing, list) else ""
         label = key.replace("_", " ").title()
-        data[key] = split_csv(prompt_value(f"{label} (comma-separated)", default, non_interactive=args.non_interactive))
+        data[key] = split_csv(
+            prompt_value(
+                f"{label} (comma-separated)", default, non_interactive=args.non_interactive
+            )
+        )
 
     return data
 
@@ -249,7 +323,14 @@ def configure_command(data: dict[str, Any], *, sync_state_doc: bool) -> list[str
 
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, cwd=ROOT.parent, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+    return subprocess.run(
+        command,
+        cwd=ROOT.parent,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
 
 
 def configure_agent_provider(data: dict[str, Any]) -> subprocess.CompletedProcess[str]:
@@ -269,28 +350,50 @@ def decision_policy_for(profile: str) -> dict[str, Any]:
         "profile": profile,
         "low_risk": {
             "default_action": "System may decide and act autonomously after recording evidence.",
-            "examples": ["docs-only correction", "formatting/lint-only fix", "rerun tests", "refresh generated reports"],
+            "examples": [
+                "docs-only correction",
+                "formatting/lint-only fix",
+                "rerun tests",
+                "refresh generated reports",
+            ],
         },
         "medium_risk": {
             "default_action": "Research first, record rationale and confidence, then escalate if uncertainty or product impact remains.",
             "confidence_threshold": 0.8,
-            "examples": ["small current-phase behavior fix", "non-breaking regression coverage", "limited config change"],
+            "examples": [
+                "small current-phase behavior fix",
+                "non-breaking regression coverage",
+                "limited config change",
+            ],
         },
         "high_risk": {
             "default_action": "Human Product Owner approval required before action.",
-            "examples": ["schema migration", "auth/security behavior", "external model behavior", "user-facing verdict/classification semantics", "preserved-component removal", "production release"],
+            "examples": [
+                "schema migration",
+                "auth/security behavior",
+                "external model behavior",
+                "user-facing verdict/classification semantics",
+                "preserved-component removal",
+                "production release",
+            ],
         },
     }
     if profile == "human-heavy":
         base["medium_risk"]["confidence_threshold"] = 0.95
-        base["medium_risk"]["default_action"] = "Research first, then request human review unless the decision is clearly reversible and low impact."
+        base["medium_risk"]["default_action"] = (
+            "Research first, then request human review unless the decision is clearly reversible and low impact."
+        )
     if profile == "autonomous-low-risk-only":
         base["medium_risk"]["confidence_threshold"] = 1.0
-        base["medium_risk"]["default_action"] = "Do not act autonomously; research and prepare a recommendation for human review."
+        base["medium_risk"]["default_action"] = (
+            "Do not act autonomously; research and prepare a recommendation for human review."
+        )
     return base
 
 
-def record_intake(data: dict[str, Any], command: list[str], applied: bool, ops_check: dict[str, Any] | None) -> None:
+def record_intake(
+    data: dict[str, Any], command: list[str], applied: bool, ops_check: dict[str, Any] | None
+) -> None:
     state = load_state()
     state["setup_intake"] = {
         "last_completed_at": now(),
@@ -310,11 +413,23 @@ def record_intake(data: dict[str, Any], command: list[str], applied: bool, ops_c
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--non-interactive", action="store_true", help="Use supplied values and defaults instead of prompting.")
-    parser.add_argument("--apply", action="store_true", help="Run configure-project.py with the collected inputs.")
-    parser.add_argument("--run-ops-check", action="store_true", help="Run ops-check.py after applying setup.")
-    parser.add_argument("--strict-ops-check", action="store_true", help="Return nonzero unless ops-check passes.")
-    parser.add_argument("--print-command", action="store_true", help="Print the configure-project.py command.")
+    parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Use supplied values and defaults instead of prompting.",
+    )
+    parser.add_argument(
+        "--apply", action="store_true", help="Run configure-project.py with the collected inputs."
+    )
+    parser.add_argument(
+        "--run-ops-check", action="store_true", help="Run ops-check.py after applying setup."
+    )
+    parser.add_argument(
+        "--strict-ops-check", action="store_true", help="Return nonzero unless ops-check passes."
+    )
+    parser.add_argument(
+        "--print-command", action="store_true", help="Print the configure-project.py command."
+    )
     parser.add_argument("--json", action="store_true", help="Print setup intake as JSON.")
     parser.add_argument("--project-name")
     parser.add_argument("--repo-name")
@@ -325,7 +440,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--active-branch")
     parser.add_argument("--active-pr")
     parser.add_argument("--test-command")
-    parser.add_argument("--human-approval-required", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
+    parser.add_argument(
+        "--human-approval-required",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
     parser.add_argument("--blocker-mode", choices=BLOCKER_MODES)
     parser.add_argument("--blocker-recovery-limit", type=int)
     parser.add_argument("--policy-profile", choices=sorted(PROFILE_DEFAULTS))

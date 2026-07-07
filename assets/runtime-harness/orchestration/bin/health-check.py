@@ -7,11 +7,9 @@ import argparse
 import json
 import os
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ROOT.parent
@@ -214,7 +212,8 @@ def unresolved_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
@@ -281,7 +280,9 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     git_status = check_git_repo(warnings)
 
     if args.require_agent_command and not os.environ.get("AGENT_COMMAND"):
-        warnings.append("AGENT_COMMAND is not set; runners will only prepare prompts unless an agent command is provided.")
+        warnings.append(
+            "AGENT_COMMAND is not set; runners will only prepare prompts unless an agent command is provided."
+        )
 
     state_for_status = state if isinstance(state, dict) else {}
     status_snapshot = latest_status(state_for_status)

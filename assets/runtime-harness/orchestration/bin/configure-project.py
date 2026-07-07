@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -115,11 +114,17 @@ def update_nested_defaults(state: dict[str, Any]) -> None:
     state["write_lock"].setdefault("status", "inactive")
     state["write_lock"].setdefault("owner", "Builder")
     state["write_lock"]["scope"] = state["write_lock"].get("scope") or current_phase
-    state["write_lock"]["allowed_files"] = state.get("allowed_files", state["write_lock"].get("allowed_files", []))
-    state["write_lock"]["forbidden_files"] = state.get("forbidden_files", state["write_lock"].get("forbidden_files", []))
+    state["write_lock"]["allowed_files"] = state.get(
+        "allowed_files", state["write_lock"].get("allowed_files", [])
+    )
+    state["write_lock"]["forbidden_files"] = state.get(
+        "forbidden_files", state["write_lock"].get("forbidden_files", [])
+    )
 
     state.setdefault("phase_gate", {})
-    state["phase_gate"]["authorized_phase"] = state["phase_gate"].get("authorized_phase") or current_phase
+    state["phase_gate"]["authorized_phase"] = (
+        state["phase_gate"].get("authorized_phase") or current_phase
+    )
     state["phase_gate"].setdefault("unauthorized_phases", [])
     state["phase_gate"].setdefault(
         "next_phase_requires",
@@ -138,7 +143,11 @@ def update_nested_defaults(state: dict[str, Any]) -> None:
     state["blocking_policy"].setdefault("low_risk_recovery_allowed", True)
     state.setdefault("connected_tests", [])
     test_command = state.get("test_command")
-    if isinstance(test_command, str) and test_command.strip() and test_command.upper() not in {"TBD", "NONE", "N/A"}:
+    if (
+        isinstance(test_command, str)
+        and test_command.strip()
+        and test_command.upper() not in {"TBD", "NONE", "N/A"}
+    ):
         if test_command not in state["connected_tests"]:
             state["connected_tests"].append(test_command)
     state.setdefault("quality_rubrics", ["evals/rubrics/project-quality-rubric.md"])
@@ -161,14 +170,21 @@ def update_nested_defaults(state: dict[str, Any]) -> None:
         "decision_policy",
         {
             "profile": "risk-bucketed",
-            "low_risk": {"default_action": "System may decide and act autonomously after recording evidence."},
-            "medium_risk": {"default_action": "Research first, then escalate if uncertainty or product impact remains.", "confidence_threshold": 0.8},
+            "low_risk": {
+                "default_action": "System may decide and act autonomously after recording evidence."
+            },
+            "medium_risk": {
+                "default_action": "Research first, then escalate if uncertainty or product impact remains.",
+                "confidence_threshold": 0.8,
+            },
             "high_risk": {"default_action": "Human Product Owner approval required before action."},
             "last_decision": "TBD",
             "last_report": "TBD",
         },
     )
-    state.setdefault("state_doc", {})["path"] = state.get("state_file_path", "docs/project-roadmap-state.md")
+    state.setdefault("state_doc", {})["path"] = state.get(
+        "state_file_path", "docs/project-roadmap-state.md"
+    )
     state.setdefault("operating_policy", {})
     state["operating_policy"].setdefault("path", "operating-policy.json")
     state["operating_policy"].setdefault("profile", "standard")
@@ -285,7 +301,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--active-branch")
     parser.add_argument("--active-pr")
     parser.add_argument("--test-command")
-    parser.add_argument("--human-approval-required", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
+    parser.add_argument(
+        "--human-approval-required",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
     parser.add_argument("--allowed-file", action="append", default=[])
     parser.add_argument("--forbidden-file", action="append", default=[])
     parser.add_argument("--preserved-component", action="append", default=[])
@@ -296,22 +315,69 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--known-risk", action="append", default=[])
     parser.add_argument("--authorized-phase")
     parser.add_argument("--unauthorized-phase", action="append", default=[])
-    parser.add_argument("--blocker-mode", choices=["stop-and-ask", "bounded-recovery", "docs-only-continue", "draft-pr-with-blockers", "backlog-and-pause"])
+    parser.add_argument(
+        "--blocker-mode",
+        choices=[
+            "stop-and-ask",
+            "bounded-recovery",
+            "docs-only-continue",
+            "draft-pr-with-blockers",
+            "backlog-and-pause",
+        ],
+    )
     parser.add_argument("--blocker-recovery-limit", type=int)
     parser.add_argument("--policy-profile")
-    parser.add_argument("--policy-require-watchdog-pass", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--policy-require-latest-eval-pass", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--policy-require-ci-pass", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--policy-require-human-approval", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--policy-strict-file-guard", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--policy-release-gate", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--policy-strict-gates", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--policy-watch-ci", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--policy-ci-required", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--policy-remediate-on-gate-failure", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
+    parser.add_argument(
+        "--policy-require-watchdog-pass",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--policy-require-latest-eval-pass",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--policy-require-ci-pass",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--policy-require-human-approval",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--policy-strict-file-guard",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--policy-release-gate",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--policy-strict-gates",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--policy-watch-ci",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--policy-ci-required",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--policy-remediate-on-gate-failure",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
     parser.add_argument("--policy-release-mode", choices=["status", "pr", "merge", "release"])
-    parser.add_argument("--append", action="store_true", help="Append list values instead of replacing the target lists.")
-    parser.add_argument("--sync-state-doc", action="store_true", help="Refresh the shared markdown state file after configuration.")
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Append list values instead of replacing the target lists.",
+    )
+    parser.add_argument(
+        "--sync-state-doc",
+        action="store_true",
+        help="Refresh the shared markdown state file after configuration.",
+    )
     parser.add_argument("--json", action="store_true", help="Print updated state as JSON.")
     return parser.parse_args()
 

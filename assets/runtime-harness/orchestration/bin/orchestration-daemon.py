@@ -17,7 +17,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 DEFAULT_QUEUE = [
     "builder",
     "qa",
@@ -62,16 +61,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--disable-file-guard", action="store_true")
     parser.add_argument("--no-file-guard-blocker", action="store_true")
     parser.add_argument("--release-gate", action="store_true")
-    parser.add_argument("--release-mode", choices=["status", "pr", "merge", "release"], default="status")
+    parser.add_argument(
+        "--release-mode", choices=["status", "pr", "merge", "release"], default="status"
+    )
     parser.add_argument("--release-pr", default="")
     parser.add_argument("--release-pr-from-file", default="")
     parser.add_argument("--release-open-blocker", action="store_true")
     parser.add_argument("--release-strict-file-guard", action="store_true")
     parser.add_argument("--allow-draft-pr", action="store_true")
     parser.add_argument("--allow-review-pending", action="store_true")
-    parser.add_argument("--resume-plan", action="store_true", help="Run resume-plan.py --apply before daemon steps.")
+    parser.add_argument(
+        "--resume-plan", action="store_true", help="Run resume-plan.py --apply before daemon steps."
+    )
     parser.add_argument("--resume-prefer-remediation", action="store_true")
-    parser.add_argument("--sync-state-doc", action="store_true", help="Forward --sync-state-doc to run-cycle.py after each role.")
+    parser.add_argument(
+        "--sync-state-doc",
+        action="store_true",
+        help="Forward --sync-state-doc to run-cycle.py after each role.",
+    )
     parser.add_argument(
         "--stop-on-blocker",
         action="store_true",

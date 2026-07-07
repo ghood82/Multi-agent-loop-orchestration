@@ -13,7 +13,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -166,13 +165,17 @@ def parse_args() -> argparse.Namespace:
 
     snapshot = sub.add_parser("snapshot")
     snapshot.add_argument("--role", required=True)
-    snapshot.add_argument("--mode", default="auto", choices=["auto", "read-only", "write", "docs-only"])
+    snapshot.add_argument(
+        "--mode", default="auto", choices=["auto", "read-only", "write", "docs-only"]
+    )
     snapshot.add_argument("--ignore", action="append", default=[])
 
     check = sub.add_parser("check")
     check.add_argument("--snapshot", required=True)
     check.add_argument("--role", required=True)
-    check.add_argument("--mode", default="auto", choices=["auto", "read-only", "write", "docs-only"])
+    check.add_argument(
+        "--mode", default="auto", choices=["auto", "read-only", "write", "docs-only"]
+    )
     check.add_argument("--allowed", action="append", default=[])
     check.add_argument("--forbidden", action="append", default=[])
     check.add_argument("--ignore", action="append", default=[])
@@ -219,7 +222,9 @@ def violations_for(
             violations.append(f"{role} is read-only but changed {path}")
             continue
         if mode == "docs-only" and not matches(path, DOCS_ALLOWED):
-            violations.append(f"{role} may only change docs/memory/markdown files but changed {path}")
+            violations.append(
+                f"{role} may only change docs/memory/markdown files but changed {path}"
+            )
             continue
         if forbidden and matches(path, forbidden):
             violations.append(f"{role} changed forbidden file {path}")

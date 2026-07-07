@@ -25,7 +25,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 HOOK_SOURCE = ROOT / "hooks" / "pre-commit"
 MARKER = "orchestration: production-code write-lock enforcement"
@@ -73,9 +72,15 @@ def is_managed(text: str) -> bool:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--target", default=".", help="Repository root. Defaults to current directory.")
-    parser.add_argument("--check", action="store_true", help="Verify the hook is installed; write nothing.")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--target", default=".", help="Repository root. Defaults to current directory."
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="Verify the hook is installed; write nothing."
+    )
     parser.add_argument("--json", action="store_true", help="Emit a machine-readable result.")
     return parser.parse_args(argv)
 
@@ -104,7 +109,9 @@ def main(argv: list[str] | None = None) -> int:
         result = {
             "installed": installed,
             "hook_path": str(hook_path),
-            "message": "Write-lock hook installed." if installed else "Write-lock hook is NOT installed.",
+            "message": "Write-lock hook installed."
+            if installed
+            else "Write-lock hook is NOT installed.",
         }
         emit(result, args.json)
         return 0 if installed else 1
@@ -129,7 +136,12 @@ def main(argv: list[str] | None = None) -> int:
     if preserved:
         message += f" Preserved existing hook as {preserved} (it still runs after the check)."
     emit(
-        {"installed": True, "hook_path": str(hook_path), "preserved": preserved, "message": message},
+        {
+            "installed": True,
+            "hook_path": str(hook_path),
+            "preserved": preserved,
+            "message": message,
+        },
         args.json,
     )
     return 0

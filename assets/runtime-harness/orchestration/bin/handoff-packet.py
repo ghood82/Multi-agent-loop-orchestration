@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -69,7 +68,8 @@ def open_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
@@ -91,7 +91,12 @@ def bullet_list(value: Any) -> str:
     lines: list[str] = []
     for item in value:
         if isinstance(item, dict):
-            label = item.get("description") or item.get("summary") or item.get("id") or json.dumps(item, sort_keys=True)
+            label = (
+                item.get("description")
+                or item.get("summary")
+                or item.get("id")
+                or json.dumps(item, sort_keys=True)
+            )
             parts = []
             for key in ["status", "severity", "owner", "verdict", "evidence"]:
                 if item.get(key):
@@ -144,15 +149,23 @@ def role_constraints(role: str) -> list[str]:
         constraints.append("Builder is the only default loop allowed to write production code.")
         constraints.append("Add or update tests for changed behavior and run relevant validation.")
     elif role in read_only:
-        constraints.append("This role is read-only for production code unless explicitly authorized.")
+        constraints.append(
+            "This role is read-only for production code unless explicitly authorized."
+        )
     if role == "docs":
-        constraints.append("Documentation may update docs/state/memory artifacts, but must not change product logic.")
+        constraints.append(
+            "Documentation may update docs/state/memory artifacts, but must not change product logic."
+        )
     if role == "remediation":
-        constraints.append("Remediation should address open blockers and rerun the affected verification, not jump phases.")
+        constraints.append(
+            "Remediation should address open blockers and rerun the affected verification, not jump phases."
+        )
     return constraints
 
 
-def build_packet(state: dict[str, Any], target_role: str, event_limit: int, report_limit: int) -> str:
+def build_packet(
+    state: dict[str, Any], target_role: str, event_limit: int, report_limit: int
+) -> str:
     write_lock = get_obj(state, "write_lock")
     phase_gate = get_obj(state, "phase_gate")
     blocking_policy = get_obj(state, "blocking_policy")
@@ -292,9 +305,15 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--role", default="", help="Target role. Defaults to current daemon role.")
     parser.add_argument("--events", type=int, default=8, help="Recent events to include.")
-    parser.add_argument("--reports", type=int, default=8, help="Recent structured report refs to include.")
-    parser.add_argument("--write", action="store_true", help="Write packet under orchestration/handoffs/.")
-    parser.add_argument("--write-report", action="store_true", help="Record packet creation as structured evidence.")
+    parser.add_argument(
+        "--reports", type=int, default=8, help="Recent structured report refs to include."
+    )
+    parser.add_argument(
+        "--write", action="store_true", help="Write packet under orchestration/handoffs/."
+    )
+    parser.add_argument(
+        "--write-report", action="store_true", help="Record packet creation as structured evidence."
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON result when writing.")
     return parser.parse_args()
 

@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -52,8 +51,14 @@ def default_policy() -> dict[str, Any]:
 
 
 def build_report(args: argparse.Namespace, state: dict[str, Any]) -> dict[str, Any]:
-    policy = state.get("decision_policy") if isinstance(state.get("decision_policy"), dict) else default_policy()
-    bucket = policy.get(f"{args.risk}_risk") if isinstance(policy.get(f"{args.risk}_risk"), dict) else {}
+    policy = (
+        state.get("decision_policy")
+        if isinstance(state.get("decision_policy"), dict)
+        else default_policy()
+    )
+    bucket = (
+        policy.get(f"{args.risk}_risk") if isinstance(policy.get(f"{args.risk}_risk"), dict) else {}
+    )
     threshold = float(bucket.get("confidence_threshold", 0.8 if args.risk == "medium" else 0.0))
     confidence = args.confidence if args.confidence is not None else 0.0
     missing: list[str] = []
@@ -107,7 +112,9 @@ def recommended_next_action(risk: str, decision: str) -> str:
     if decision == "REQUEST_EVIDENCE":
         return "Add the missing evidence before acting."
     if risk == "medium":
-        return "Proceed within the authorized phase and record the rationale in the next loop report."
+        return (
+            "Proceed within the authorized phase and record the rationale in the next loop report."
+        )
     return "Proceed autonomously and record evidence in the shared state."
 
 
@@ -122,7 +129,11 @@ def write_report(report: dict[str, Any], open_blocker: bool) -> Path:
     state.setdefault("structured_reports", []).append(rel_path)
     state.setdefault("decision_policy", {})["last_decision"] = report["decision"]
     state.setdefault("decision_policy", {})["last_report"] = rel_path
-    if open_blocker and report["decision"] in {"HUMAN_REQUIRED", "HUMAN_RECOMMENDED", "REQUEST_EVIDENCE"}:
+    if open_blocker and report["decision"] in {
+        "HUMAN_REQUIRED",
+        "HUMAN_RECOMMENDED",
+        "REQUEST_EVIDENCE",
+    }:
         state.setdefault("open_blockers", []).append(
             {
                 "id": f"blocker-{report['id']}",
@@ -142,7 +153,9 @@ def write_report(report: dict[str, Any], open_blocker: bool) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--risk", choices=["low", "medium", "high"], required=True)
-    parser.add_argument("--decision", required=True, help="The action or decision being considered.")
+    parser.add_argument(
+        "--decision", required=True, help="The action or decision being considered."
+    )
     parser.add_argument("--evidence", action="append", default=[])
     parser.add_argument("--research-summary", default="")
     parser.add_argument("--confidence", type=float)

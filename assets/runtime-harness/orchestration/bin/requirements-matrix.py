@@ -6,10 +6,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
-
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
@@ -99,7 +99,9 @@ def provider_check(expected: list[str]) -> Check:
     def check(_state: dict[str, Any]) -> tuple[bool, str]:
         config = load_json(ROOT / "agent-adapter.json", {})
         providers = config.get("providers") if isinstance(config, dict) else {}
-        missing = [name for name in expected if not isinstance(providers, dict) or name not in providers]
+        missing = [
+            name for name in expected if not isinstance(providers, dict) or name not in providers
+        ]
         return not missing, f"agent providers missing: {', '.join(missing) if missing else 'none'}"
 
     return check
@@ -107,8 +109,14 @@ def provider_check(expected: list[str]) -> Check:
 
 def stop_reasons_check(expected: list[str]) -> Check:
     def check(state: dict[str, Any]) -> tuple[bool, str]:
-        policy = state.get("blocking_policy") if isinstance(state.get("blocking_policy"), dict) else {}
-        reasons = policy.get("stop_immediately_for") if isinstance(policy.get("stop_immediately_for"), list) else []
+        policy = (
+            state.get("blocking_policy") if isinstance(state.get("blocking_policy"), dict) else {}
+        )
+        reasons = (
+            policy.get("stop_immediately_for")
+            if isinstance(policy.get("stop_immediately_for"), list)
+            else []
+        )
         missing = [reason for reason in expected if reason not in reasons]
         return not missing, f"stop reasons missing: {', '.join(missing) if missing else 'none'}"
 
@@ -117,12 +125,19 @@ def stop_reasons_check(expected: list[str]) -> Check:
 
 def write_lock_check(state: dict[str, Any]) -> tuple[bool, str]:
     lock = state.get("write_lock") if isinstance(state.get("write_lock"), dict) else {}
-    ok = str(lock.get("owner", "")).lower() == "builder" and "allowed_files" in lock and "forbidden_files" in lock
+    ok = (
+        str(lock.get("owner", "")).lower() == "builder"
+        and "allowed_files" in lock
+        and "forbidden_files" in lock
+    )
     return ok, "write_lock.owner=Builder with allowed_files and forbidden_files"
 
 
 def human_gate_check(state: dict[str, Any]) -> tuple[bool, str]:
-    return "human_approval_required" in state and "approval_requests" in state, "human_approval_required and approval_requests"
+    return (
+        "human_approval_required" in state and "approval_requests" in state,
+        "human_approval_required and approval_requests",
+    )
 
 
 def eval_tooling_check(state: dict[str, Any]) -> tuple[bool, str]:
@@ -134,14 +149,23 @@ def eval_tooling_check(state: dict[str, Any]) -> tuple[bool, str]:
         ROOT / "evals" / "results",
         ROOT / "evals" / "rubrics" / "project-quality-rubric.md",
     ]
-    keys = ["eval_fixtures", "eval_results", "last_eval_result_artifact", "watchdog_evidence", "quality_rubrics"]
+    keys = [
+        "eval_fixtures",
+        "eval_results",
+        "last_eval_result_artifact",
+        "watchdog_evidence",
+        "quality_rubrics",
+    ]
     ok = all(path.exists() for path in paths) and all(key in state for key in keys)
     return ok, "eval fixture/result scripts, Watchdog evidence prep, rubric, dirs, and state keys"
 
 
 def decision_policy_check(state: dict[str, Any]) -> tuple[bool, str]:
     policy = state.get("decision_policy") if isinstance(state.get("decision_policy"), dict) else {}
-    ok = all(key in policy for key in ["low_risk", "medium_risk", "high_risk"]) and (ROOT / "bin" / "decision-gate.py").is_file()
+    ok = (
+        all(key in policy for key in ["low_risk", "medium_risk", "high_risk"])
+        and (ROOT / "bin" / "decision-gate.py").is_file()
+    )
     return ok, "decision_policy low/medium/high buckets and decision-gate.py"
 
 
@@ -149,7 +173,12 @@ REQUIREMENTS: list[dict[str, Any]] = [
     {
         "id": "skill-runtime-harness",
         "requirement": "Reusable project-local orchestration harness exists.",
-        "checks": [file_check("state.json"), file_check("README.md"), dir_check("bin"), file_check("operating-policy.json")],
+        "checks": [
+            file_check("state.json"),
+            file_check("README.md"),
+            dir_check("bin"),
+            file_check("operating-policy.json"),
+        ],
     },
     {
         "id": "shared-state-template",
@@ -179,7 +208,11 @@ REQUIREMENTS: list[dict[str, Any]] = [
     {
         "id": "single-writer",
         "requirement": "Only one loop writes production code at a time; Builder owns production-code edits by default.",
-        "checks": [write_lock_check, file_check("locks/production-code.lock"), doc_phrase_check("only one loop writes production code at a time")],
+        "checks": [
+            write_lock_check,
+            file_check("locks/production-code.lock"),
+            doc_phrase_check("only one loop writes production code at a time"),
+        ],
     },
     {
         "id": "loop-prompts",
@@ -199,41 +232,70 @@ REQUIREMENTS: list[dict[str, Any]] = [
     {
         "id": "handoff-sequence",
         "requirement": "Recommended handoff sequence is encoded.",
-        "checks": [daemon_roles_check(["builder", "qa", "security", "eval-builder", "eval", "watchdog", "architect", "docs"]), file_check("bin/handoff-packet.py")],
+        "checks": [
+            daemon_roles_check(
+                [
+                    "builder",
+                    "qa",
+                    "security",
+                    "eval-builder",
+                    "eval",
+                    "watchdog",
+                    "architect",
+                    "docs",
+                ]
+            ),
+            file_check("bin/handoff-packet.py"),
+        ],
     },
     {
         "id": "human-product-owner-gate",
         "requirement": "Human Product Owner gate exists for high-impact decisions.",
-        "checks": [human_gate_check, file_check("bin/approval-request.py"), doc_phrase_check("Human Product Owner")],
+        "checks": [
+            human_gate_check,
+            file_check("bin/approval-request.py"),
+            doc_phrase_check("Human Product Owner"),
+        ],
     },
     {
         "id": "stop-conditions",
         "requirement": "Global stop conditions and stop report format exist.",
         "checks": [
-            stop_reasons_check([
-                "security/privacy risk",
-                "schema migration",
-                "auth changes",
-                "external model behavior",
-                "preserved-component removal",
-                "API compatibility risk",
-                "product judgment",
-                "repeated test failures",
-                "process drift",
-                "unclear requirements",
-            ]),
+            stop_reasons_check(
+                [
+                    "security/privacy risk",
+                    "schema migration",
+                    "auth changes",
+                    "external model behavior",
+                    "preserved-component removal",
+                    "API compatibility risk",
+                    "product judgment",
+                    "repeated test failures",
+                    "process drift",
+                    "unclear requirements",
+                ]
+            ),
             file_check("bin/stop-report.py"),
         ],
     },
     {
         "id": "blocker-recovery",
         "requirement": "Open blockers are enforced and can be remediated.",
-        "checks": [state_key_check("blocking_policy"), file_check("bin/resume-plan.py"), file_check("bin/run-remediation.sh"), file_check("bin/update-state.py")],
+        "checks": [
+            state_key_check("blocking_policy"),
+            file_check("bin/resume-plan.py"),
+            file_check("bin/run-remediation.sh"),
+            file_check("bin/update-state.py"),
+        ],
     },
     {
         "id": "watchdog",
         "requirement": "Watchdog / Quality Governor loop exists and checks process/product/eval quality.",
-        "checks": [state_key_check("watchdog"), executable_check("bin/run-watchdog.sh"), doc_phrase_check("Watchdog checks product quality")],
+        "checks": [
+            state_key_check("watchdog"),
+            executable_check("bin/run-watchdog.sh"),
+            doc_phrase_check("Watchdog checks product quality"),
+        ],
     },
     {
         "id": "eval-regression",
@@ -243,17 +305,40 @@ REQUIREMENTS: list[dict[str, Any]] = [
     {
         "id": "security-privacy",
         "requirement": "Security / Privacy review loop exists and high-risk areas are represented.",
-        "checks": [executable_check("bin/run-security.sh"), state_key_check("high_risk_areas"), doc_phrase_check("Security/Privacy")],
+        "checks": [
+            executable_check("bin/run-security.sh"),
+            state_key_check("high_risk_areas"),
+            doc_phrase_check("Security/Privacy"),
+        ],
     },
     {
         "id": "phase-release-gates",
         "requirement": "Architect/release/phase gates prevent unsafe advancement.",
-        "checks": [file_check("bin/phase-gate.py"), file_check("bin/release-gate.py"), state_key_check("phase_gate"), state_key_check("release_gate")],
+        "checks": [
+            file_check("bin/phase-gate.py"),
+            file_check("bin/release-gate.py"),
+            state_key_check("phase_gate"),
+            state_key_check("release_gate"),
+        ],
     },
     {
         "id": "provider-adapter",
         "requirement": "Provider-neutral agent adapter and named presets exist.",
-        "checks": [file_check("bin/agent-adapter.py"), file_check("bin/configure-agent-provider.py"), provider_check(["auto", "prompt-only", "command", "codex-cli", "claude-code", "codex-subagent", "custom-command"])],
+        "checks": [
+            file_check("bin/agent-adapter.py"),
+            file_check("bin/configure-agent-provider.py"),
+            provider_check(
+                [
+                    "auto",
+                    "prompt-only",
+                    "command",
+                    "codex-cli",
+                    "claude-code",
+                    "codex-subagent",
+                    "custom-command",
+                ]
+            ),
+        ],
     },
     {
         "id": "risk-decision-policy",
@@ -263,32 +348,56 @@ REQUIREMENTS: list[dict[str, Any]] = [
     {
         "id": "subagents",
         "requirement": "Read-only subagent dispatch exists.",
-        "checks": [file_check("bin/dispatch-subagents.py"), file_check("subagents/manifest.json"), state_key_check("subagent_runs")],
+        "checks": [
+            file_check("bin/dispatch-subagents.py"),
+            file_check("subagents/manifest.json"),
+            state_key_check("subagent_runs"),
+        ],
     },
     {
         "id": "one-command-adoption",
         "requirement": "One-command adoption path exists in the skill package and runtime has first setup intake.",
-        "checks": [file_check("bin/setup-intake.py"), state_key_check("setup_intake"), doc_phrase_check("one-command")],
+        "checks": [
+            file_check("bin/setup-intake.py"),
+            state_key_check("setup_intake"),
+            doc_phrase_check("one-command"),
+        ],
     },
     {
         "id": "operator-doctor",
         "requirement": "Operator doctor explains readiness and next exact command.",
-        "checks": [file_check("bin/doctor.py"), state_key_check("doctor"), doc_phrase_check("doctor")],
+        "checks": [
+            file_check("bin/doctor.py"),
+            state_key_check("doctor"),
+            doc_phrase_check("doctor"),
+        ],
     },
     {
         "id": "ops-check",
         "requirement": "Consolidated readiness check exists.",
-        "checks": [file_check("bin/ops-check.py"), state_key_check("ops_check"), doc_phrase_check("consolidated")],
+        "checks": [
+            file_check("bin/ops-check.py"),
+            state_key_check("ops_check"),
+            doc_phrase_check("consolidated"),
+        ],
     },
     {
         "id": "docs-memory",
         "requirement": "Documentation / Memory Keeper updates shared state and project memory.",
-        "checks": [executable_check("bin/run-docs.sh"), file_check("bin/sync-state-doc.py"), state_key_check("state_doc")],
+        "checks": [
+            executable_check("bin/run-docs.sh"),
+            file_check("bin/sync-state-doc.py"),
+            state_key_check("state_doc"),
+        ],
     },
     {
         "id": "acceptance-audit",
         "requirement": "Acceptance and requirement audits can verify the operating system.",
-        "checks": [file_check("bin/acceptance-audit.py"), file_check("bin/requirements-matrix.py"), state_key_check("acceptance_audit")],
+        "checks": [
+            file_check("bin/acceptance-audit.py"),
+            file_check("bin/requirements-matrix.py"),
+            state_key_check("acceptance_audit"),
+        ],
     },
 ]
 
@@ -321,7 +430,9 @@ def build_report() -> dict[str, Any]:
         "role": "requirements-matrix",
         "status": "completed",
         "verdict": verdict,
-        "summary": "Requirement matrix passed." if verdict == "PASS" else f"{len(failures)} requirement(s) missing evidence.",
+        "summary": "Requirement matrix passed."
+        if verdict == "PASS"
+        else f"{len(failures)} requirement(s) missing evidence.",
         "created_at": now(),
         "requirements_total": len(rows),
         "requirements_passed": len(rows) - len(failures),
@@ -369,7 +480,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write-report", action="store_true")
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--strict", action="store_true", help="Return nonzero unless every requirement passes.")
+    parser.add_argument(
+        "--strict", action="store_true", help="Return nonzero unless every requirement passes."
+    )
     return parser.parse_args()
 
 

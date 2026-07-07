@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -63,7 +62,8 @@ def open_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
@@ -97,7 +97,13 @@ def bullet_list(value: Any) -> str:
     lines: list[str] = []
     for item in value:
         if isinstance(item, dict):
-            label = item.get("description") or item.get("summary") or item.get("name") or item.get("id") or json.dumps(item, sort_keys=True)
+            label = (
+                item.get("description")
+                or item.get("summary")
+                or item.get("name")
+                or item.get("id")
+                or json.dumps(item, sort_keys=True)
+            )
             parts = []
             for key in ["status", "severity", "owner", "evidence", "missing"]:
                 if item.get(key):
@@ -284,7 +290,9 @@ def run_dashboard(args: argparse.Namespace) -> tuple[str, Path, str, str]:
         status = "PASS" if is_current else "STALE"
         if args.write_report:
             report_path = write_report(state, path, digest, status)
-            state.setdefault("operating_dashboard", {})["last_report"] = str(report_path.relative_to(ROOT))
+            state.setdefault("operating_dashboard", {})["last_report"] = str(
+                report_path.relative_to(ROOT)
+            )
             save_state(state)
             log_event(status, str(path))
         return status, path, digest, "up to date" if is_current else "dashboard is stale or missing"
@@ -310,11 +318,19 @@ def run_dashboard(args: argparse.Namespace) -> tuple[str, Path, str, str]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--path", default="", help="Dashboard path. Defaults to orchestration/operating-dashboard.md.")
+    parser.add_argument(
+        "--path",
+        default="",
+        help="Dashboard path. Defaults to orchestration/operating-dashboard.md.",
+    )
     parser.add_argument("--events", type=int, default=8, help="Number of recent events to include.")
     parser.add_argument("--write-report", action="store_true")
-    parser.add_argument("--check", action="store_true", help="Fail if the dashboard is stale or missing.")
-    parser.add_argument("--dry-run", action="store_true", help="Print dashboard markdown instead of writing it.")
+    parser.add_argument(
+        "--check", action="store_true", help="Fail if the dashboard is stale or missing."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print dashboard markdown instead of writing it."
+    )
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 
@@ -323,7 +339,13 @@ def main() -> int:
     args = parse_args()
     status, path, digest, message = run_dashboard(args)
     if args.json:
-        print(json.dumps({"status": status, "path": str(path), "sha256": digest, "message": message}, indent=2, sort_keys=True))
+        print(
+            json.dumps(
+                {"status": status, "path": str(path), "sha256": digest, "message": message},
+                indent=2,
+                sort_keys=True,
+            )
+        )
     elif not args.dry_run:
         print(f"Operating dashboard {status}: {path}")
         if message:

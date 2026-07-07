@@ -41,7 +41,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 
@@ -196,12 +195,18 @@ def evaluate(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--staged", action="store_true", help="Check staged changes (pre-commit).")
-    source.add_argument("--against", metavar="REF", help="Check changes relative to a base ref (REF...HEAD).")
+    source.add_argument(
+        "--against", metavar="REF", help="Check changes relative to a base ref (REF...HEAD)."
+    )
     source.add_argument("--range", metavar="A..B", help="Check an explicit commit range.")
-    source.add_argument("--paths", nargs="+", metavar="PATH", help="Check an explicit list of paths.")
+    source.add_argument(
+        "--paths", nargs="+", metavar="PATH", help="Check an explicit list of paths."
+    )
     parser.add_argument(
         "--require-active-lock",
         dest="require_active_lock",
@@ -215,8 +220,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_false",
         help="Only enforce forbidden/preserved paths and active-lock scope (recommended for CI on human PRs).",
     )
-    parser.add_argument("--ignore", action="append", default=[], help="Extra ignore glob (repeatable).")
-    parser.add_argument("--forbidden", action="append", default=[], help="Extra forbidden glob (repeatable).")
+    parser.add_argument(
+        "--ignore", action="append", default=[], help="Extra ignore glob (repeatable)."
+    )
+    parser.add_argument(
+        "--forbidden", action="append", default=[], help="Extra forbidden glob (repeatable)."
+    )
     parser.add_argument("--json", action="store_true", help="Emit the machine-readable verdict.")
     return parser.parse_args(argv)
 

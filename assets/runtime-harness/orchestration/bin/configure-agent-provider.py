@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_FILE = ROOT / "agent-adapter.json"
 STATE_FILE = ROOT / "state.json"
@@ -111,7 +110,11 @@ def provider_config(args: argparse.Namespace, existing: dict[str, Any]) -> dict[
         provider["timeout_seconds"] = args.timeout_seconds
     if args.description:
         provider["description"] = args.description
-    if args.provider == "custom-command" and not provider.get("command") and provider.get("mode") == "command":
+    if (
+        args.provider == "custom-command"
+        and not provider.get("command")
+        and provider.get("mode") == "command"
+    ):
         raise SystemExit("--command is required when configuring custom-command in command mode.")
     return provider
 
@@ -178,7 +181,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--default-timeout-seconds", type=float)
     parser.add_argument("--description")
     parser.add_argument("--list", action="store_true", help="List configured providers and exit.")
-    parser.add_argument("--test", action="store_true", help="Run agent-adapter.py after configuring.")
+    parser.add_argument(
+        "--test", action="store_true", help="Run agent-adapter.py after configuring."
+    )
     parser.add_argument("--test-prompt", default="orchestration/README.md")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
@@ -193,7 +198,9 @@ def main() -> int:
         else:
             print(f"Active provider: {config.get('active_provider', 'prompt-only')}")
             for name, provider in sorted(config.get("providers", {}).items()):
-                print(f"- {name}: {provider.get('mode', 'prompt-only')} {provider.get('command', '')}".rstrip())
+                print(
+                    f"- {name}: {provider.get('mode', 'prompt-only')} {provider.get('command', '')}".rstrip()
+                )
         return 0
 
     config = configure(args)
