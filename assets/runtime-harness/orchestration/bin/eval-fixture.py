@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -84,7 +83,9 @@ def format_list(values: list[str]) -> str:
 
 def fixture_markdown(fixture: dict[str, Any]) -> str:
     expected_json = fixture.get("expected_json")
-    expected_json_text = "TBD" if expected_json is None else json.dumps(expected_json, indent=2, sort_keys=True)
+    expected_json_text = (
+        "TBD" if expected_json is None else json.dumps(expected_json, indent=2, sort_keys=True)
+    )
     return "\n".join(
         [
             f"# Eval Fixture: {fixture['name']}",
@@ -180,7 +181,9 @@ def cmd_create(args: argparse.Namespace) -> None:
     json_path = fixtures_dir / f"{fixture_id}.json"
     markdown_path = fixtures_dir / f"{fixture_id}.md"
     if json_path.exists() and not args.replace:
-        raise SystemExit(f"Eval fixture already exists: {json_path.relative_to(ROOT)}. Use --replace to overwrite.")
+        raise SystemExit(
+            f"Eval fixture already exists: {json_path.relative_to(ROOT)}. Use --replace to overwrite."
+        )
 
     json_path.write_text(json.dumps(fixture, indent=2, sort_keys=True) + "\n")
     markdown_path.write_text(fixture_markdown(fixture))
@@ -233,16 +236,39 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--description", default="")
     create.add_argument("--phase", default="", help="Defaults to state.current_phase.")
     create.add_argument("--owner", default="eval-builder")
-    create.add_argument("--source", default="", help="Issue, PR, incident, user report, or other evidence source.")
+    create.add_argument(
+        "--source", default="", help="Issue, PR, incident, user report, or other evidence source."
+    )
     create.add_argument("--input", default="", help="Inline eval input or scenario.")
     create.add_argument("--input-file", default="", help="Path to a file containing eval input.")
-    create.add_argument("--expected", action="append", default=[], help="Expected behavior. Repeat or comma-separate.")
+    create.add_argument(
+        "--expected",
+        action="append",
+        default=[],
+        help="Expected behavior. Repeat or comma-separate.",
+    )
     create.add_argument("--expected-json", default="", help="Structured expected behavior as JSON.")
-    create.add_argument("--tolerance", action="append", default=[], help="Accepted tolerance. Repeat or comma-separate.")
-    create.add_argument("--tag", action="append", default=[], help="Fixture tag. Repeat or comma-separate.")
-    create.add_argument("--risk", action="append", default=[], help="Risk this fixture protects. Repeat or comma-separate.")
-    create.add_argument("--replace", action="store_true", help="Overwrite an existing fixture with the same id.")
-    create.add_argument("--write-report", action="store_true", help="Write a structured report entry.")
+    create.add_argument(
+        "--tolerance",
+        action="append",
+        default=[],
+        help="Accepted tolerance. Repeat or comma-separate.",
+    )
+    create.add_argument(
+        "--tag", action="append", default=[], help="Fixture tag. Repeat or comma-separate."
+    )
+    create.add_argument(
+        "--risk",
+        action="append",
+        default=[],
+        help="Risk this fixture protects. Repeat or comma-separate.",
+    )
+    create.add_argument(
+        "--replace", action="store_true", help="Overwrite an existing fixture with the same id."
+    )
+    create.add_argument(
+        "--write-report", action="store_true", help="Write a structured report entry."
+    )
     create.add_argument("--json", action="store_true")
     create.set_defaults(func=cmd_create)
 

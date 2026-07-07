@@ -270,6 +270,8 @@ orchestration/README.md
 orchestration/events.log
 orchestration/tasks.md
 orchestration/locks/production-code.lock
+orchestration/hooks/pre-commit
+orchestration/ci/write-lock-check.yml
 orchestration/approvals/.gitkeep
 orchestration/approvals/requests/.gitkeep
 orchestration/reports/json/.gitkeep
@@ -290,6 +292,9 @@ orchestration/bin/configure-project.py
 orchestration/bin/update-state.py
 orchestration/bin/normalize-report.py
 orchestration/bin/guard-files.py
+orchestration/bin/enforce-write-lock.py
+orchestration/bin/install-hooks.py
+orchestration/bin/write-lock.py
 orchestration/bin/release-gate.py
 orchestration/bin/resume-plan.py
 orchestration/bin/doctor.py
@@ -324,6 +329,23 @@ Use the harness this way:
 
 ```bash
 python3 orchestration/bin/setup-intake.py
+```
+
+Enforce the production-code write lock at the git boundary. The installer wires this in automatically for git repos; install or verify it directly with:
+
+```bash
+python3 orchestration/bin/install-hooks.py          # install / refresh the pre-commit hook
+python3 orchestration/bin/install-hooks.py --check  # verify only
+```
+
+The hook runs `enforce-write-lock.py`, which fails a commit that changes production code without an active, in-scope write lock (or that touches a forbidden/preserved path). Copy `orchestration/ci/write-lock-check.yml` into `.github/workflows/` for the pull-request layer.
+
+Manage the lock with `write-lock.py` (it keeps `state.json` and the `locks/production-code.lock` mirror in sync). `run-builder.sh` acquires it for Builder automatically at the start of a Builder run:
+
+```bash
+python3 orchestration/bin/write-lock.py acquire --owner Builder   # acquire, scoped to allowed_files
+python3 orchestration/bin/write-lock.py status                    # inspect + check mirror sync
+python3 orchestration/bin/write-lock.py release                   # release on handoff
 ```
 
 Use `setup-intake.py` for the first human-friendly setup. It asks only for safety-relevant inputs: project identity, current phase/objective, allowed and forbidden files, preserved components, forbidden changes, high-risk areas, eval fixtures, blocker-handling mode, human approval policy, and operating-policy profile. It can print a configure command, apply the setup, and run the consolidated ops check:

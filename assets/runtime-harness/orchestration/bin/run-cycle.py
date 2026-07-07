@@ -13,10 +13,8 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 ROLE_SCRIPTS = {
     "builder": "run-builder.sh",
@@ -344,7 +342,9 @@ def guard_check(
     print(result.stdout, end="")
     append_event(root, "File Guard", "check_completed", f"role={role} exit={result.returncode}")
     if result.returncode != 0:
-        raise SystemExit(f"File guard blocked {role}. See state.json open_blockers and file_guard_checks.")
+        raise SystemExit(
+            f"File guard blocked {role}. See state.json open_blockers and file_guard_checks."
+        )
 
 
 def run_roles(
@@ -370,11 +370,7 @@ def run_roles(
         result = run(["bash", str(bin_dir / script)], root, env=env, check=False)
         report_path = reports_dir / role_report_name(role)
         report_path.write_text(
-            f"# {role} report\n\n"
-            f"Exit code: {result.returncode}\n\n"
-            "```text\n"
-            f"{result.stdout}"
-            "\n```\n"
+            f"# {role} report\n\nExit code: {result.returncode}\n\n```text\n{result.stdout}\n```\n"
         )
         reports.append(report_path)
         append_event(root, role, "runner_completed", f"{report_path.name} exit={result.returncode}")
@@ -428,7 +424,9 @@ def dispatch_subagents_if_requested(
             command.append("--no-file-guard-blocker")
         result = run(command, root, check=False)
         print(result.stdout, end="")
-        append_event(root, "Subagent Dispatcher", "completed", f"role={role} exit={result.returncode}")
+        append_event(
+            root, "Subagent Dispatcher", "completed", f"role={role} exit={result.returncode}"
+        )
         if result.returncode != 0:
             raise SystemExit(f"Subagent dispatch failed for {role}:\n{result.stdout}")
 
@@ -472,23 +470,37 @@ def apply_policy_defaults(root: Path, args: argparse.Namespace) -> None:
     gates = policy.get("gates") if isinstance(policy.get("gates"), dict) else {}
     cycle = policy.get("run_cycle") if isinstance(policy.get("run_cycle"), dict) else {}
     args.require_ci_pass = args.require_ci_pass or bool(gates.get("require_ci_pass"))
-    args.require_latest_eval_pass = args.require_latest_eval_pass or bool(gates.get("require_latest_eval_pass"))
-    args.require_human_approval = args.require_human_approval or bool(gates.get("require_human_approval"))
-    args.release_strict_file_guard = args.release_strict_file_guard or bool(gates.get("strict_file_guard"))
+    args.require_latest_eval_pass = args.require_latest_eval_pass or bool(
+        gates.get("require_latest_eval_pass")
+    )
+    args.require_human_approval = args.require_human_approval or bool(
+        gates.get("require_human_approval")
+    )
+    args.release_strict_file_guard = args.release_strict_file_guard or bool(
+        gates.get("strict_file_guard")
+    )
     args.release_gate = args.release_gate or bool(cycle.get("release_gate"))
     args.strict_gates = args.strict_gates or bool(cycle.get("strict_gates"))
     args.watch_ci = args.watch_ci or bool(cycle.get("watch_ci"))
     args.ci_required = args.ci_required or bool(cycle.get("ci_required"))
-    args.remediate_on_gate_failure = args.remediate_on_gate_failure or bool(cycle.get("remediate_on_gate_failure"))
+    args.remediate_on_gate_failure = args.remediate_on_gate_failure or bool(
+        cycle.get("remediate_on_gate_failure")
+    )
     release_mode = cycle.get("release_mode")
-    if args.release_mode == "status" and isinstance(release_mode, str) and release_mode in {"status", "pr", "merge", "release"}:
+    if (
+        args.release_mode == "status"
+        and isinstance(release_mode, str)
+        and release_mode in {"status", "pr", "merge", "release"}
+    ):
         args.release_mode = release_mode
 
     state = load_state(root)
     state.setdefault("operating_policy", {})["path"] = str(Path(args.policy))
     if policy.get("profile"):
         state.setdefault("operating_policy", {})["profile"] = policy.get("profile")
-    state.setdefault("operating_policy", {})["last_loaded_at"] = datetime.now(timezone.utc).isoformat()
+    state.setdefault("operating_policy", {})["last_loaded_at"] = datetime.now(
+        timezone.utc
+    ).isoformat()
     (root / "state.json").write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
 
 
@@ -502,7 +514,9 @@ def open_blockers(root: Path) -> list[str]:
             if isinstance(item, dict):
                 if item.get("status", "open") in {"resolved", "closed"}:
                     continue
-                description = item.get("description") or item.get("id") or json.dumps(item, sort_keys=True)
+                description = (
+                    item.get("description") or item.get("id") or json.dumps(item, sort_keys=True)
+                )
                 blockers.append(str(description))
             elif str(item).strip():
                 blockers.append(str(item))
@@ -513,11 +527,7 @@ def open_blockers(root: Path) -> list[str]:
             return []
         return [normalized]
     if isinstance(raw_blockers, dict):
-        return [
-            f"{key}: {value}"
-            for key, value in raw_blockers.items()
-            if str(value).strip()
-        ]
+        return [f"{key}: {value}" for key, value in raw_blockers.items() if str(value).strip()]
     return [str(raw_blockers)]
 
 
@@ -537,10 +547,16 @@ def watchdog_verdict(root: Path) -> tuple[str | None, Path | None]:
     if structured:
         verdict = structured.get("verdict") or structured.get("status")
         if verdict:
-            return str(verdict).upper(), root / "reports" / "json" / f"{structured.get('id', 'watchdog')}.json"
+            return str(
+                verdict
+            ).upper(), root / "reports" / "json" / f"{structured.get('id', 'watchdog')}.json"
 
     state_verdict = load_state(root).get("watchdog", {}).get("last_verdict")
-    if isinstance(state_verdict, str) and state_verdict.strip() and state_verdict.upper() not in {"TBD", "NONE", "N/A"}:
+    if (
+        isinstance(state_verdict, str)
+        and state_verdict.strip()
+        and state_verdict.upper() not in {"TBD", "NONE", "N/A"}
+    ):
         return state_verdict.upper(), root / "state.json"
 
     report = latest_watchdog_report(root)
@@ -639,12 +655,10 @@ def gate_failure_message(
 
     verdict, report = watchdog_verdict(root)
     if verdict != "PASS":
-        report_note = f" Latest Watchdog report: {report}" if report else " No Watchdog report found."
-        return (
-            "latest Watchdog verdict is not PASS."
-            f" Found: {verdict or 'missing'}."
-            f"{report_note}"
+        report_note = (
+            f" Latest Watchdog report: {report}" if report else " No Watchdog report found."
         )
+        return f"latest Watchdog verdict is not PASS. Found: {verdict or 'missing'}.{report_note}"
     return None
 
 
@@ -723,7 +737,9 @@ def run_release_gate_if_requested(
         command.append("--allow-review-pending")
     result = run(command, root, check=False)
     print(result.stdout, end="")
-    append_event(root, "Release Gate", "run_cycle_gate", f"action={action} exit={result.returncode}")
+    append_event(
+        root, "Release Gate", "run_cycle_gate", f"action={action} exit={result.returncode}"
+    )
     if result.returncode != 0:
         stop_for_gate_failure(root, bin_dir, args, action, "release gate did not PASS")
 

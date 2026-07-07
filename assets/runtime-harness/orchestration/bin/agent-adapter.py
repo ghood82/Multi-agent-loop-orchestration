@@ -14,7 +14,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -93,7 +92,9 @@ def provider_by_name(name: str, config: dict[str, Any]) -> dict[str, Any]:
     return provider
 
 
-def resolve_auto_provider(config: dict[str, Any], provider: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+def resolve_auto_provider(
+    config: dict[str, Any], provider: dict[str, Any]
+) -> tuple[str, dict[str, Any]]:
     priority = provider.get("priority")
     if not isinstance(priority, list) or not priority:
         priority = ["codex-cli", "claude-code", "prompt-only"]
@@ -109,9 +110,15 @@ def resolve_auto_provider(config: dict[str, Any], provider: dict[str, Any]) -> t
     return "prompt-only", {"mode": "prompt-only"}
 
 
-def active_provider(args: argparse.Namespace, config: dict[str, Any]) -> tuple[str, dict[str, Any], str]:
+def active_provider(
+    args: argparse.Namespace, config: dict[str, Any]
+) -> tuple[str, dict[str, Any], str]:
     command_supplied = bool(args.argv or args.command or os.environ.get("AGENT_COMMAND"))
-    provider_name = args.provider or os.environ.get("AGENT_PROVIDER") or ("command" if command_supplied else str(config.get("active_provider") or "prompt-only"))
+    provider_name = (
+        args.provider
+        or os.environ.get("AGENT_PROVIDER")
+        or ("command" if command_supplied else str(config.get("active_provider") or "prompt-only"))
+    )
     provider = provider_by_name(provider_name, config)
     if str(provider.get("mode", "prompt-only")) == "auto" and not command_supplied:
         resolved_name, resolved_provider = resolve_auto_provider(config, provider)
@@ -156,10 +163,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--role", required=True)
     parser.add_argument("--prompt-file", default="")
     parser.add_argument("--provider", default="")
-    parser.add_argument("--command", default="", help="Command string parsed with shlex; prompt is sent on stdin.")
-    parser.add_argument("--argv", action="append", default=[], help="Exact argv element. Repeat for each argument.")
+    parser.add_argument(
+        "--command", default="", help="Command string parsed with shlex; prompt is sent on stdin."
+    )
+    parser.add_argument(
+        "--argv", action="append", default=[], help="Exact argv element. Repeat for each argument."
+    )
     parser.add_argument("--timeout-seconds", type=float, default=None)
-    parser.add_argument("--resolve-only", action="store_true", help="Resolve the active provider without invoking it.")
+    parser.add_argument(
+        "--resolve-only",
+        action="store_true",
+        help="Resolve the active provider without invoking it.",
+    )
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 
@@ -174,7 +189,9 @@ def main() -> int:
     mode = str(provider.get("mode", "prompt-only"))
     timeout = args.timeout_seconds
     if timeout is None:
-        timeout = float(provider.get("timeout_seconds", config.get("default_timeout_seconds", 0)) or 0)
+        timeout = float(
+            provider.get("timeout_seconds", config.get("default_timeout_seconds", 0)) or 0
+        )
 
     stdout = ""
     stderr = ""
@@ -193,8 +210,7 @@ def main() -> int:
                 cwd=ROOT.parent,
                 input=prompt,
                 text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 timeout=timeout if timeout and timeout > 0 else None,
                 check=False,
             )
@@ -227,7 +243,11 @@ def main() -> int:
     }
     report_path = write_run_record(record, stdout)
     update_state(record, report_path)
-    log_event("Agent Adapter", "completed", f"role={args.role} provider={provider_name} resolved={resolved_provider_name} exit={exit_code}")
+    log_event(
+        "Agent Adapter",
+        "completed",
+        f"role={args.role} provider={provider_name} resolved={resolved_provider_name} exit={exit_code}",
+    )
 
     if args.json:
         output = dict(record)

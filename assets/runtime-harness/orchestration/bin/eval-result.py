@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -230,7 +229,9 @@ def cmd_record(args: argparse.Namespace) -> None:
     json_path = results_dir / f"{result_id}.json"
     markdown_path = results_dir / f"{result_id}.md"
     if json_path.exists() and not args.replace:
-        raise SystemExit(f"Eval result already exists: {json_path.relative_to(ROOT)}. Use --replace to overwrite.")
+        raise SystemExit(
+            f"Eval result already exists: {json_path.relative_to(ROOT)}. Use --replace to overwrite."
+        )
 
     json_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
     markdown_path.write_text(result_markdown(result))
@@ -283,24 +284,48 @@ def build_parser() -> argparse.ArgumentParser:
 
     record = sub.add_parser("record", help="Record an Eval Monitor result.")
     record.add_argument("--id", default="", help="Stable result id. Generated when omitted.")
-    record.add_argument("--name", default="", help="Human-readable result name. Defaults to fixture name.")
-    record.add_argument("--fixture", default="", help="Fixture JSON path or id under evals/fixtures.")
+    record.add_argument(
+        "--name", default="", help="Human-readable result name. Defaults to fixture name."
+    )
+    record.add_argument(
+        "--fixture", default="", help="Fixture JSON path or id under evals/fixtures."
+    )
     record.add_argument("--phase", default="", help="Defaults to state.current_phase.")
     record.add_argument("--runner", default="eval-monitor")
     record.add_argument("--command", default="", help="Command or procedure used to run the eval.")
-    record.add_argument("--verdict", required=True, choices=["PASS", "FAIL", "DRIFT", "BLOCKED", "SKIPPED"])
+    record.add_argument(
+        "--verdict", required=True, choices=["PASS", "FAIL", "DRIFT", "BLOCKED", "SKIPPED"]
+    )
     record.add_argument("--severity", default="high", choices=["low", "medium", "high", "critical"])
     record.add_argument("--expected", default="", help="Expected output as JSON or text.")
     record.add_argument("--expected-file", default="", help="Read expected output from a file.")
     record.add_argument("--actual", default="", help="Actual output as JSON or text.")
     record.add_argument("--actual-file", default="", help="Read actual output from a file.")
-    record.add_argument("--diff", action="append", default=[], help="Observed difference. Repeat or comma-separate.")
-    record.add_argument("--risk", action="append", default=[], help="Risk detected or covered. Repeat or comma-separate.")
-    record.add_argument("--evidence", action="append", default=[], help="Evidence path, URL, or note. Repeat or comma-separate.")
+    record.add_argument(
+        "--diff", action="append", default=[], help="Observed difference. Repeat or comma-separate."
+    )
+    record.add_argument(
+        "--risk",
+        action="append",
+        default=[],
+        help="Risk detected or covered. Repeat or comma-separate.",
+    )
+    record.add_argument(
+        "--evidence",
+        action="append",
+        default=[],
+        help="Evidence path, URL, or note. Repeat or comma-separate.",
+    )
     record.add_argument("--recommended-next-action", default="")
-    record.add_argument("--open-blocker", action="store_true", help="Open a blocker when verdict is not PASS.")
-    record.add_argument("--replace", action="store_true", help="Overwrite an existing result with the same id.")
-    record.add_argument("--write-report", action="store_true", help="Write a structured report entry.")
+    record.add_argument(
+        "--open-blocker", action="store_true", help="Open a blocker when verdict is not PASS."
+    )
+    record.add_argument(
+        "--replace", action="store_true", help="Overwrite an existing result with the same id."
+    )
+    record.add_argument(
+        "--write-report", action="store_true", help="Write a structured report entry."
+    )
     record.add_argument("--json", action="store_true")
     record.set_defaults(func=cmd_record)
 

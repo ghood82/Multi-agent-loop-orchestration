@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multi-agent-orchestration"
+version = "0.2.0"
+description = "Skill and runtime harness for coordinating controlled multi-agent software engineering loops."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE.md" }
+authors = [{ name = "Multi-Agent Orchestration maintainers" }]
+keywords = ["orchestration", "multi-agent", "codex", "claude-code", "ai-engineering"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.optional-dependencies]
+dev = ["ruff==0.15.8", "mypy==1.19.1", "pytest>=8"]
+
+[project.urls]
+Homepage = "https://github.com/ghood82/multi-agent-loop-orchestration"
+Source = "https://github.com/ghood82/multi-agent-loop-orchestration"
+
+# Console entry points. The commands resolve the packaged `assets/` template
+# relative to the source tree, so install this project in editable mode from a
+# checkout of the skill folder:
+#
+#     pip install -e .
+#
+# This matches the skill's distribution model (clone or copy the folder) and
+# gives you short commands instead of long `python3 scripts/...` invocations:
+#
+#     orchestration-init   --target /path/to/repo ...
+#     orchestration-adopt  --target /path/to/repo ...
+#     orchestration-smoke-test
+[project.scripts]
+orchestration-init = "create_runtime_harness:main"
+orchestration-adopt = "adopt_project:main"
+orchestration-smoke-test = "smoke_test_runtime_harness:main"
+
+[tool.setuptools]
+py-modules = ["create_runtime_harness", "adopt_project", "smoke_test_runtime_harness"]
+
+[tool.setuptools.package-dir]
+"" = "scripts"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+# Default (E, F) plus import sorting (I), pyupgrade (UP), flake8-bugbear (B),
+# and comprehensions (C4). Keep the set pragmatic for a script-heavy repo.
+select = ["E", "F", "I", "UP", "B", "C4"]
+ignore = [
+    "E501",  # line length is handled by the formatter, not enforced as an error
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+# mypy is scoped to the typed core (packaged entry points + write-lock
+# enforcement). The broader runtime-harness scripts predate typing and are
+# added incrementally; expand `files` as modules are annotated.
+[tool.mypy]
+files = [
+    "scripts/create_runtime_harness.py",
+    "scripts/adopt_project.py",
+    "scripts/smoke_test_runtime_harness.py",
+    "assets/runtime-harness/orchestration/bin/enforce-write-lock.py",
+    "assets/runtime-harness/orchestration/bin/install-hooks.py",
+    "assets/runtime-harness/orchestration/bin/write-lock.py",
+]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true

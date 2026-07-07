@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 PLACEHOLDER_DEFAULTS = {
     "PROJECT_NAME": "TBD",
@@ -34,17 +34,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo-name", default=PLACEHOLDER_DEFAULTS["REPO_NAME"])
     parser.add_argument("--roadmap-name", default=PLACEHOLDER_DEFAULTS["ROADMAP_NAME"])
     parser.add_argument("--current-phase", default=PLACEHOLDER_DEFAULTS["CURRENT_PHASE"])
-    parser.add_argument(
-        "--current-objective", default=PLACEHOLDER_DEFAULTS["CURRENT_OBJECTIVE"]
-    )
-    parser.add_argument(
-        "--state-file-path", default=PLACEHOLDER_DEFAULTS["STATE_FILE_PATH"]
-    )
+    parser.add_argument("--current-objective", default=PLACEHOLDER_DEFAULTS["CURRENT_OBJECTIVE"])
+    parser.add_argument("--state-file-path", default=PLACEHOLDER_DEFAULTS["STATE_FILE_PATH"])
     parser.add_argument("--test-command", default=PLACEHOLDER_DEFAULTS["TEST_COMMAND"])
     parser.add_argument(
         "--force",
         action="store_true",
         help="Overwrite existing harness files.",
+    )
+    parser.add_argument(
+        "--install-hooks",
+        dest="install_hooks",
+        action="store_true",
+        default=None,
+        help="Install the write-lock git hook. Default: on when the target is a git repo.",
+    )
+    parser.add_argument(
+        "--no-install-hooks",
+        dest="install_hooks",
+        action="store_false",
+        help="Skip installing the write-lock git hook.",
     )
     return parser.parse_args()
 
@@ -73,7 +82,9 @@ def should_skip(path: Path) -> bool:
     return "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}
 
 
-def copy_template(template_root: Path, target_root: Path, values: dict[str, str], force: bool) -> list[Path]:
+def copy_template(
+    template_root: Path, target_root: Path, values: dict[str, str], force: bool
+) -> list[Path]:
     created: list[Path] = []
     for src in sorted(template_root.rglob("*")):
         if should_skip(src.relative_to(template_root)):
@@ -84,9 +95,7 @@ def copy_template(template_root: Path, target_root: Path, values: dict[str, str]
             dest.mkdir(parents=True, exist_ok=True)
             continue
         if dest.exists() and not force:
-            raise FileExistsError(
-                f"{dest} already exists. Re-run with --force to overwrite it."
-            )
+            raise FileExistsError(f"{dest} already exists. Re-run with --force to overwrite it.")
         dest.parent.mkdir(parents=True, exist_ok=True)
         try:
             rendered = render_text(src.read_text(), values)
@@ -114,7 +123,52 @@ def main() -> int:
     print(f"Created orchestration harness in {target_root}")
     for path in created:
         print(f"- {path.relative_to(target_root)}")
-    return 0
+
+    hooks_note, hooks_ok = maybe_install_hooks(target_root, args.install_hooks)
+    if hooks_note:
+        print(hooks_note)
+    # Surface a failed hook install to callers (e.g. adopt_project.py) rather
+    # than reporting success while write-lock enforcement is not actually wired.
+    return 0 if hooks_ok else 1
+
+
+def is_git_repo(target_root: Path) -> bool:
+    result = subprocess.run(
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        cwd=target_root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+def maybe_install_hooks(target_root: Path, install_hooks: bool | None) -> tuple[str, bool]:
+    """Install the write-lock hook unless disabled or the target is not a git repo.
+
+    Returns ``(message, ok)``. ``ok`` is False only when a hook install was
+    attempted and genuinely failed; skipping (disabled, or not a git repo) is a
+    success.
+    """
+    if install_hooks is False:
+        return "Skipped git hook installation (--no-install-hooks).", True
+    if not is_git_repo(target_root):
+        if install_hooks is True:
+            return "Skipped git hook installation: target is not a git repository.", True
+        return "", True
+    installer = target_root / "orchestration" / "bin" / "install-hooks.py"
+    result = subprocess.run(
+        [sys.executable, str(installer), "--target", str(target_root)],
+        cwd=target_root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    if result.returncode != 0:
+        return f"Warning: git hook installation failed:\n{result.stdout.strip()}", False
+    return result.stdout.strip(), True
 
 
 if __name__ == "__main__":

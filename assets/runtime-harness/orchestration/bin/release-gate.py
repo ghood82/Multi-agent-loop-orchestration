@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -30,7 +29,9 @@ def compact_ts() -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Evaluate release readiness from orchestration state.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate release readiness from orchestration state."
+    )
     parser.add_argument("--mode", choices=["status", "pr", "merge", "release"], default="status")
     parser.add_argument("--pr", default="", help="PR number, URL, or branch for GitHub CLI lookup.")
     parser.add_argument("--pr-from-file", default="", help="Read gh pr view JSON from a file.")
@@ -41,8 +42,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--allow-draft-pr", action="store_true")
     parser.add_argument("--allow-review-pending", action="store_true")
     parser.add_argument("--strict-file-guard", action="store_true")
-    parser.add_argument("--policy", default="operating-policy.json", help="Operating policy JSON path, relative to orchestration root unless absolute.")
-    parser.add_argument("--no-policy", action="store_true", help="Ignore operating-policy.json defaults for this run.")
+    parser.add_argument(
+        "--policy",
+        default="operating-policy.json",
+        help="Operating policy JSON path, relative to orchestration root unless absolute.",
+    )
+    parser.add_argument(
+        "--no-policy",
+        action="store_true",
+        help="Ignore operating-policy.json defaults for this run.",
+    )
     parser.add_argument("--open-blocker", action="store_true")
     return parser.parse_args()
 
@@ -79,8 +88,12 @@ def policy_gates(policy: dict[str, Any]) -> dict[str, Any]:
 def apply_policy(args: argparse.Namespace, policy: dict[str, Any]) -> None:
     gates = policy_gates(policy)
     args.require_ci_pass = args.require_ci_pass or bool(gates.get("require_ci_pass"))
-    args.require_human_approval = args.require_human_approval or bool(gates.get("require_human_approval"))
-    args.require_latest_eval_pass = args.require_latest_eval_pass or bool(gates.get("require_latest_eval_pass"))
+    args.require_human_approval = args.require_human_approval or bool(
+        gates.get("require_human_approval")
+    )
+    args.require_latest_eval_pass = args.require_latest_eval_pass or bool(
+        gates.get("require_latest_eval_pass")
+    )
     args.strict_file_guard = args.strict_file_guard or bool(gates.get("strict_file_guard"))
     if gates.get("require_watchdog_pass") is False:
         args.require_watchdog_pass = False
@@ -103,7 +116,8 @@ def open_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
@@ -207,7 +221,9 @@ def add_issue(issues: list[str], issue: str) -> None:
         issues.append(issue)
 
 
-def evaluate(args: argparse.Namespace, state: dict[str, Any], pr: dict[str, Any], pr_error: str) -> tuple[str, list[str], list[str]]:
+def evaluate(
+    args: argparse.Namespace, state: dict[str, Any], pr: dict[str, Any], pr_error: str
+) -> tuple[str, list[str], list[str]]:
     blockers = open_blockers(state)
     blocking: list[str] = []
     warnings: list[str] = []
@@ -223,7 +239,9 @@ def evaluate(args: argparse.Namespace, state: dict[str, Any], pr: dict[str, Any]
         add_issue(blocking, f"CI is not passing: {ci_conclusion(state) or 'missing'}.")
 
     if args.require_latest_eval_pass and latest_eval_result(state) != "PASS":
-        add_issue(blocking, f"Latest eval result is not PASS: {latest_eval_result(state) or 'missing'}.")
+        add_issue(
+            blocking, f"Latest eval result is not PASS: {latest_eval_result(state) or 'missing'}."
+        )
 
     if args.require_human_approval and not approval_exists(state):
         add_issue(blocking, "Required human approval artifact is missing.")
@@ -232,7 +250,10 @@ def evaluate(args: argparse.Namespace, state: dict[str, Any], pr: dict[str, Any]
     if args.strict_file_guard and guard_violations:
         add_issue(blocking, f"{len(guard_violations)} historical file guard violation(s) found.")
     elif guard_violations:
-        add_issue(warnings, f"{len(guard_violations)} historical file guard violation(s) recorded; ensure blockers are resolved.")
+        add_issue(
+            warnings,
+            f"{len(guard_violations)} historical file guard violation(s) recorded; ensure blockers are resolved.",
+        )
 
     if pr_error:
         if args.mode in {"merge", "release"}:
@@ -249,21 +270,39 @@ def evaluate(args: argparse.Namespace, state: dict[str, Any], pr: dict[str, Any]
             add_issue(blocking, f"PR is not open: {state_value}.")
         if pr.get("isDraft") and not args.allow_draft_pr:
             add_issue(blocking, "PR is draft.")
-        if args.mode in {"merge", "release"} and review not in {"APPROVED"} and not args.allow_review_pending:
+        if (
+            args.mode in {"merge", "release"}
+            and review not in {"APPROVED"}
+            and not args.allow_review_pending
+        ):
             add_issue(blocking, f"PR review is not approved: {review or 'missing'}.")
-        if args.mode in {"merge", "release"} and merge_state not in {"CLEAN", "HAS_HOOKS", "UNKNOWN"}:
+        if args.mode in {"merge", "release"} and merge_state not in {
+            "CLEAN",
+            "HAS_HOOKS",
+            "UNKNOWN",
+        }:
             add_issue(blocking, f"PR merge state is not clean: {merge_state or 'missing'}.")
         if args.mode in {"merge", "release"} and mergeable in {"CONFLICTING", "FALSE"}:
             add_issue(blocking, f"PR is not mergeable: {mergeable}.")
 
     if blocking:
-        if any("CI is not passing" in item or "PR is draft" in item or "review is not approved" in item for item in blocking):
+        if any(
+            "CI is not passing" in item or "PR is draft" in item or "review is not approved" in item
+            for item in blocking
+        ):
             return "WAITING", blocking, warnings
         return "STOP", blocking, warnings
     return "PASS", blocking, warnings
 
 
-def write_report(args: argparse.Namespace, state: dict[str, Any], pr: dict[str, Any], decision: str, blocking: list[str], warnings: list[str]) -> Path:
+def write_report(
+    args: argparse.Namespace,
+    state: dict[str, Any],
+    pr: dict[str, Any],
+    decision: str,
+    blocking: list[str],
+    warnings: list[str],
+) -> Path:
     reports_dir = ROOT / "reports" / "json"
     reports_dir.mkdir(parents=True, exist_ok=True)
     report = {
@@ -293,7 +332,9 @@ def write_report(args: argparse.Namespace, state: dict[str, Any], pr: dict[str, 
     return path
 
 
-def maybe_open_blocker(state: dict[str, Any], decision: str, blocking: list[str], report_path: Path) -> None:
+def maybe_open_blocker(
+    state: dict[str, Any], decision: str, blocking: list[str], report_path: Path
+) -> None:
     if decision == "PASS" or not blocking:
         return
     state.setdefault("open_blockers", []).append(
@@ -317,7 +358,9 @@ def main() -> int:
     state.setdefault("operating_policy", {})["path"] = str(Path(args.policy))
     if policy.get("profile"):
         state.setdefault("operating_policy", {})["profile"] = policy.get("profile")
-    state.setdefault("operating_policy", {})["last_loaded_at"] = now() if policy else state.setdefault("operating_policy", {}).get("last_loaded_at", "TBD")
+    state.setdefault("operating_policy", {})["last_loaded_at"] = (
+        now() if policy else state.setdefault("operating_policy", {}).get("last_loaded_at", "TBD")
+    )
     pr, pr_error = load_pr(args)
     decision, blocking, warnings = evaluate(args, state, pr, pr_error)
     report_path = write_report(args, state, pr, decision, blocking, warnings)

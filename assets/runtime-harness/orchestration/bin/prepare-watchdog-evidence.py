@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parent
 STATE_FILE = ROOT / "state.json"
@@ -60,7 +59,11 @@ def run_git(args: list[str]) -> str:
         stderr=subprocess.STDOUT,
         check=False,
     )
-    return result.stdout.strip() if result.returncode == 0 else f"git {' '.join(args)} failed: {result.stdout.strip()}"
+    return (
+        result.stdout.strip()
+        if result.returncode == 0
+        else f"git {' '.join(args)} failed: {result.stdout.strip()}"
+    )
 
 
 def ensure_rubric() -> None:
@@ -127,7 +130,9 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "role": "prepare-watchdog-evidence",
         "created_at": now(),
         "verdict": verdict,
-        "summary": "Watchdog evidence prepared." if verdict == "PASS" else "Watchdog evidence prepared with gaps.",
+        "summary": "Watchdog evidence prepared."
+        if verdict == "PASS"
+        else "Watchdog evidence prepared with gaps.",
         "missing_evidence": missing,
         "quality_rubric": str(RUBRIC.relative_to(ROOT)) if RUBRIC.exists() else "missing",
         "connected_tests": connected_tests,
@@ -135,7 +140,9 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "eval_results": eval_results,
         "latest_reports": latest_reports(),
         "pr_diff": diff_report,
-        "recommended_next_action": "Run Watchdog." if verdict == "PASS" else "Assign Eval Builder/Eval Monitor or project setup to close missing evidence before Watchdog PASS.",
+        "recommended_next_action": "Run Watchdog."
+        if verdict == "PASS"
+        else "Assign Eval Builder/Eval Monitor or project setup to close missing evidence before Watchdog PASS.",
     }
 
 
@@ -173,8 +180,16 @@ def write_report(packet: dict[str, Any]) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write-report", action="store_true")
-    parser.add_argument("--strict", action="store_true", help="Return nonzero unless the evidence packet is complete.")
-    parser.add_argument("--no-bootstrap", action="store_true", help="Do not create a starter quality rubric when missing.")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Return nonzero unless the evidence packet is complete.",
+    )
+    parser.add_argument(
+        "--no-bootstrap",
+        action="store_true",
+        help="Do not create a starter quality rubric when missing.",
+    )
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 

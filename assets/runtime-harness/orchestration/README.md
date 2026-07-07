@@ -235,3 +235,48 @@ Subagents are read-only specialists by default. They may inspect and report find
 ## File Guard
 
 The file guard is a process-drift detector, not an operating-system sandbox. It snapshots files before each role, checks what changed afterward, records violations, and can open blockers when a read-only role or subagent changes files it should not touch. It helps stop unsafe handoffs, but it does not replace branch protection, CI, code review, or filesystem permissions.
+
+## Write-Lock Enforcement
+
+The write lock stops being advisory here. `enforce-write-lock.py` fails an operation *before* an unauthorized production-code change can land, rather than only recording it afterward like the file guard does.
+
+A production-code change is authorized only when the shared write lock in `state.json` is `active` and the change stays inside the lock's `allowed_files`. Changes to `forbidden_files`, `preserved_components`, or declared `forbidden_changes` are never authorized without human sign-off. Docs, markdown, and the `orchestration/` control plane are never treated as production code.
+
+Installed as a pre-commit hook (automatically when the harness lands in a git repo):
+
+```bash
+python3 orchestration/bin/install-hooks.py            # install / refresh
+python3 orchestration/bin/install-hooks.py --check    # verify, write nothing
+```
+
+The hook preserves any pre-existing pre-commit hook as `pre-commit.local` and chains to it. Bypass in an emergency with `ORCH_ALLOW_LOCK_OVERRIDE=1 git commit ...` (reported loudly) or `git commit --no-verify`.
+
+Manage the lock with `write-lock.py`, which keeps `state.json` and the
+`locks/production-code.lock` mirror in sync:
+
+```bash
+python3 orchestration/bin/configure-project.py --allowed-file "src/**"  # what Builder may touch
+python3 orchestration/bin/write-lock.py acquire --owner Builder          # acquire (scoped to allowed_files)
+python3 orchestration/bin/write-lock.py status                          # inspect, and check the mirror is in sync
+python3 orchestration/bin/write-lock.py release                         # release on handoff
+```
+
+`run-builder.sh` acquires the lock for Builder automatically at the start of a
+Builder run (and refuses to run if another loop holds it), so in the normal loop
+you rarely call `acquire` by hand. Acquiring another loop's active lock requires
+`--force`.
+
+Check changes directly:
+
+```bash
+python3 orchestration/bin/enforce-write-lock.py --staged                  # staged changes (pre-commit)
+python3 orchestration/bin/enforce-write-lock.py --against origin/main --json
+```
+
+Add the second layer in CI (a hook can be skipped with `--no-verify`; CI cannot). Copy the template workflow into your repo:
+
+```bash
+cp orchestration/ci/write-lock-check.yml .github/workflows/
+```
+
+By default the CI check does not require an active lock for every pull request (that would block ordinary human contributions). It always blocks forbidden/preserved paths and enforces the active lock's scope. Add `--require-active-lock` to require an active lock for all production-code changes.

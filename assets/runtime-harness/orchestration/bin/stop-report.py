@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -130,7 +129,9 @@ def create_stop_report(args: argparse.Namespace) -> tuple[dict[str, Any], Path, 
     state.setdefault("structured_reports", []).append(rel_json)
     state.setdefault("stop_reports", []).append(rel_markdown)
     state["last_stop_report"] = rel_markdown
-    state["next_authorized_action"] = args.recommended_next_action or "Human decision required before continuing."
+    state["next_authorized_action"] = (
+        args.recommended_next_action or "Human decision required before continuing."
+    )
 
     if args.open_blocker:
         blocker = {
@@ -153,13 +154,27 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stop-reason", required=True)
     parser.add_argument("--current-phase", default="")
-    parser.add_argument("--file", action="append", default=[], help="File involved. May be repeated or comma-separated.")
+    parser.add_argument(
+        "--file",
+        action="append",
+        default=[],
+        help="File involved. May be repeated or comma-separated.",
+    )
     parser.add_argument("--what-changed", default="")
     parser.add_argument("--what-failed", default="")
-    parser.add_argument("--test", action="append", default=[], help="Test command/result. May be repeated or comma-separated.")
-    parser.add_argument("--risk", action="append", default=[], help="Risk. May be repeated or comma-separated.")
+    parser.add_argument(
+        "--test",
+        action="append",
+        default=[],
+        help="Test command/result. May be repeated or comma-separated.",
+    )
+    parser.add_argument(
+        "--risk", action="append", default=[], help="Risk. May be repeated or comma-separated."
+    )
     parser.add_argument("--recommended-next-action", default="")
-    parser.add_argument("--human-decision-needed", default="yes", choices=["yes", "no", "true", "false"])
+    parser.add_argument(
+        "--human-decision-needed", default="yes", choices=["yes", "no", "true", "false"]
+    )
     parser.add_argument("--owner", default="human-product-owner")
     parser.add_argument("--severity", default="high")
     parser.add_argument("--open-blocker", action="store_true")
@@ -171,7 +186,13 @@ def main() -> int:
     args = parse_args()
     report, markdown_path, json_path = create_stop_report(args)
     if args.json:
-        print(json.dumps({"report": report, "markdown": str(markdown_path), "json": str(json_path)}, indent=2, sort_keys=True))
+        print(
+            json.dumps(
+                {"report": report, "markdown": str(markdown_path), "json": str(json_path)},
+                indent=2,
+                sort_keys=True,
+            )
+        )
     else:
         print(markdown_path)
     return 0

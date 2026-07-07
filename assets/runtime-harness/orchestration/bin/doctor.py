@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -78,7 +77,8 @@ def open_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
@@ -90,8 +90,14 @@ def get_obj(state: dict[str, Any], key: str) -> dict[str, Any]:
 def provider_summary(provider_json: dict[str, Any] | None, state: dict[str, Any]) -> dict[str, Any]:
     adapter = get_obj(state, "agent_adapter")
     if isinstance(provider_json, dict):
-        active = provider_json.get("active_provider", adapter.get("configured_provider", "prompt-only"))
-        provider = provider_json.get("providers", {}).get(active, {}) if isinstance(provider_json.get("providers"), dict) else {}
+        active = provider_json.get(
+            "active_provider", adapter.get("configured_provider", "prompt-only")
+        )
+        provider = (
+            provider_json.get("providers", {}).get(active, {})
+            if isinstance(provider_json.get("providers"), dict)
+            else {}
+        )
     else:
         active = adapter.get("configured_provider", "prompt-only")
         provider = {}
@@ -105,7 +111,9 @@ def provider_summary(provider_json: dict[str, Any] | None, state: dict[str, Any]
     }
 
 
-def decide(state: dict[str, Any], steps: dict[str, dict[str, Any]], provider: dict[str, Any]) -> tuple[str, str, str]:
+def decide(
+    state: dict[str, Any], steps: dict[str, dict[str, Any]], provider: dict[str, Any]
+) -> tuple[str, str, str]:
     health = steps.get("health-check", {}).get("json") or {}
     status = steps.get("operator-status", {}).get("json") or {}
     resume = steps.get("resume-plan", {}).get("json") or {}
@@ -113,7 +121,11 @@ def decide(state: dict[str, Any], steps: dict[str, dict[str, Any]], provider: di
     ops_check = get_obj(state, "ops_check")
 
     if health.get("verdict") == "FAIL":
-        return "STOP", "Fix harness health failures.", "python3 orchestration/bin/health-check.py --write-report"
+        return (
+            "STOP",
+            "Fix harness health failures.",
+            "python3 orchestration/bin/health-check.py --write-report",
+        )
     if provider.get("active_provider") == "prompt-only":
         return (
             "READY_PROMPT_ONLY",
@@ -128,12 +140,24 @@ def decide(state: dict[str, Any], steps: dict[str, dict[str, Any]], provider: di
         )
     status_decision = str(status.get("operating_decision", "")).upper()
     if status_decision in {"STOP", "REMEDIATE", "WAIT", "RESUME_PLAN"}:
-        return status_decision, status.get("recommended_next_action", "Follow operator status recommendation."), status.get("recommended_next_action", "")
+        return (
+            status_decision,
+            status.get("recommended_next_action", "Follow operator status recommendation."),
+            status.get("recommended_next_action", ""),
+        )
     resume_decision = str(resume.get("decision", "")).upper()
     if resume_decision in {"REMEDIATE", "WAIT", "PAUSE_FOR_HUMAN", "RERUN_OR_REMEDIATE"}:
-        return resume_decision, resume.get("next_action", "Follow resume plan."), "python3 orchestration/bin/resume-plan.py --apply --write-report"
+        return (
+            resume_decision,
+            resume.get("next_action", "Follow resume plan."),
+            "python3 orchestration/bin/resume-plan.py --apply --write-report",
+        )
     if ops_check.get("last_decision") == "FAIL":
-        return "CHECK_GATES", ops_check.get("recommended_next_action", "Review ops-check findings."), "python3 orchestration/bin/ops-check.py --json"
+        return (
+            "CHECK_GATES",
+            ops_check.get("recommended_next_action", "Review ops-check findings."),
+            "python3 orchestration/bin/ops-check.py --json",
+        )
     return (
         "CONTINUE",
         "Run the next authorized role.",
@@ -144,13 +168,36 @@ def decide(state: dict[str, Any], steps: dict[str, dict[str, Any]], provider: di
 def build_report(args: argparse.Namespace) -> dict[str, Any]:
     bin_dir = ROOT / "bin"
     raw_steps = [
-        run_step("health-check", [sys.executable, str(bin_dir / "health-check.py"), "--write-report"]),
-        run_step("provider-list", [sys.executable, str(bin_dir / "configure-agent-provider.py"), "--list", "--json"]),
-        run_step("operator-status", [sys.executable, str(bin_dir / "status.py"), "--write-report", "--json", "--events", str(args.events)]),
-        run_step("resume-plan", [sys.executable, str(bin_dir / "resume-plan.py"), "--write-report"]),
+        run_step(
+            "health-check", [sys.executable, str(bin_dir / "health-check.py"), "--write-report"]
+        ),
+        run_step(
+            "provider-list",
+            [sys.executable, str(bin_dir / "configure-agent-provider.py"), "--list", "--json"],
+        ),
+        run_step(
+            "operator-status",
+            [
+                sys.executable,
+                str(bin_dir / "status.py"),
+                "--write-report",
+                "--json",
+                "--events",
+                str(args.events),
+            ],
+        ),
+        run_step(
+            "resume-plan", [sys.executable, str(bin_dir / "resume-plan.py"), "--write-report"]
+        ),
     ]
     if args.run_ops_check:
-        command = [sys.executable, str(bin_dir / "ops-check.py"), "--json", "--events", str(args.events)]
+        command = [
+            sys.executable,
+            str(bin_dir / "ops-check.py"),
+            "--json",
+            "--events",
+            str(args.events),
+        ]
         if args.strict_ops_check:
             command.append("--strict")
         raw_steps.append(run_step("ops-check", command))
@@ -253,7 +300,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--strict-ops-check", action="store_true")
     parser.add_argument("--write-report", action="store_true")
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--strict", action="store_true", help="Return nonzero unless doctor verdict is CONTINUE.")
+    parser.add_argument(
+        "--strict", action="store_true", help="Return nonzero unless doctor verdict is CONTINUE."
+    )
     return parser.parse_args()
 
 

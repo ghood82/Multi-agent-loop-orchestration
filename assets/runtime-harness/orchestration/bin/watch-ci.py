@@ -11,12 +11,10 @@ import argparse
 import json
 import shutil
 import subprocess
-import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
@@ -33,15 +31,23 @@ def now() -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Watch PR CI status and update orchestration state.")
+    parser = argparse.ArgumentParser(
+        description="Watch PR CI status and update orchestration state."
+    )
     parser.add_argument("--provider", default="github")
-    parser.add_argument("--pr", default="", help="PR number, URL, or branch. Defaults to current branch PR.")
+    parser.add_argument(
+        "--pr", default="", help="PR number, URL, or branch. Defaults to current branch PR."
+    )
     parser.add_argument("--required", action="store_true", help="Only inspect required PR checks.")
     parser.add_argument("--watch", action="store_true", help="Poll until checks finish or timeout.")
     parser.add_argument("--interval", type=float, default=30.0)
     parser.add_argument("--timeout-seconds", type=float, default=900.0)
-    parser.add_argument("--repo", default="", help="GitHub repo in HOST/OWNER/REPO or OWNER/REPO form.")
-    parser.add_argument("--from-file", default="", help="Read gh pr checks JSON from a file instead of calling gh.")
+    parser.add_argument(
+        "--repo", default="", help="GitHub repo in HOST/OWNER/REPO or OWNER/REPO form."
+    )
+    parser.add_argument(
+        "--from-file", default="", help="Read gh pr checks JSON from a file instead of calling gh."
+    )
     return parser.parse_args()
 
 

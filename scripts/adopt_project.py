@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 CREATE_HARNESS = SKILL_ROOT / "scripts" / "create_runtime_harness.py"
 
@@ -114,6 +113,10 @@ def create_harness_command(args: argparse.Namespace, target: Path) -> list[str]:
     ]
     if args.force:
         command.append("--force")
+    if args.install_hooks is False:
+        command.append("--no-install-hooks")
+    elif args.install_hooks is True:
+        command.append("--install-hooks")
     return command
 
 
@@ -128,9 +131,30 @@ def parse_json_stdout(stdout: str) -> dict[str, Any]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", default=".", help="Target repository root.")
-    parser.add_argument("--force", action="store_true", help="Overwrite an existing orchestration harness.")
-    parser.add_argument("--strict-readiness", action="store_true", help="Fail adoption unless the consolidated ops check passes.")
-    parser.add_argument("--json", action="store_true", help="Print machine-readable adoption output.")
+    parser.add_argument(
+        "--force", action="store_true", help="Overwrite an existing orchestration harness."
+    )
+    parser.add_argument(
+        "--install-hooks",
+        dest="install_hooks",
+        action="store_true",
+        default=None,
+        help="Install the write-lock git hook. Default: on when the target is a git repo.",
+    )
+    parser.add_argument(
+        "--no-install-hooks",
+        dest="install_hooks",
+        action="store_false",
+        help="Skip installing the write-lock git hook.",
+    )
+    parser.add_argument(
+        "--strict-readiness",
+        action="store_true",
+        help="Fail adoption unless the consolidated ops check passes.",
+    )
+    parser.add_argument(
+        "--json", action="store_true", help="Print machine-readable adoption output."
+    )
     parser.add_argument("--project-name")
     parser.add_argument("--repo-name")
     parser.add_argument("--roadmap-name")
@@ -140,8 +164,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--active-branch")
     parser.add_argument("--active-pr")
     parser.add_argument("--test-command")
-    parser.add_argument("--human-approval-required", choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"])
-    parser.add_argument("--blocker-mode", choices=["stop-and-ask", "bounded-recovery", "docs-only-continue", "draft-pr-with-blockers", "backlog-and-pause"])
+    parser.add_argument(
+        "--human-approval-required",
+        choices=["true", "false", "yes", "no", "1", "0", "required", "not-required"],
+    )
+    parser.add_argument(
+        "--blocker-mode",
+        choices=[
+            "stop-and-ask",
+            "bounded-recovery",
+            "docs-only-continue",
+            "draft-pr-with-blockers",
+            "backlog-and-pause",
+        ],
+    )
     parser.add_argument("--blocker-recovery-limit", type=int)
     parser.add_argument("--policy-profile", choices=["standard", "strict-pr"])
     parser.add_argument("--allowed-file", action="append", default=[])
@@ -169,7 +205,12 @@ def main() -> int:
         fail("Setup intake", setup_result)
 
     status_result = run(
-        [sys.executable, str(target / "orchestration" / "bin" / "status.py"), "--write-report", "--json"],
+        [
+            sys.executable,
+            str(target / "orchestration" / "bin" / "status.py"),
+            "--write-report",
+            "--json",
+        ],
         target,
     )
     if status_result.returncode != 0:
@@ -220,7 +261,9 @@ def main() -> int:
         print(f"Next Builder assignment: {output['next_authorized_action']}")
         if handoff_json.get("path"):
             print(f"Builder handoff packet: {handoff_json['path']}")
-        print("Run next: bash orchestration/bin/orchestration-daemon.sh --resume-plan --max-steps 1")
+        print(
+            "Run next: bash orchestration/bin/orchestration-daemon.sh --resume-plan --max-steps 1"
+        )
     return 0
 
 

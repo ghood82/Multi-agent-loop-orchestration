@@ -6,11 +6,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ROOT.parent
@@ -59,7 +57,8 @@ def open_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
@@ -239,7 +238,9 @@ def target_path(state: dict[str, Any], override: str) -> Path:
     return REPO_ROOT / path
 
 
-def write_report(state: dict[str, Any], status: str, path: Path, digest: str, check_only: bool) -> Path:
+def write_report(
+    state: dict[str, Any], status: str, path: Path, digest: str, check_only: bool
+) -> Path:
     reports_dir = ROOT / "reports" / "json"
     reports_dir.mkdir(parents=True, exist_ok=True)
     report = {
@@ -299,10 +300,18 @@ def sync_state_doc(args: argparse.Namespace) -> tuple[str, Path, str, str]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--path", default="", help="Override the target markdown path.")
-    parser.add_argument("--check", action="store_true", help="Return nonzero if the markdown file is missing or stale.")
-    parser.add_argument("--dry-run", action="store_true", help="Print markdown without writing files.")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Return nonzero if the markdown file is missing or stale.",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print markdown without writing files."
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON status.")
-    parser.add_argument("--write-report", action="store_true", help="Write a structured sync report.")
+    parser.add_argument(
+        "--write-report", action="store_true", help="Write a structured sync report."
+    )
     return parser.parse_args()
 
 

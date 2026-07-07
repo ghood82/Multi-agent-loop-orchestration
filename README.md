@@ -1,14 +1,15 @@
 # Multi-Agent Orchestration Skill
 
-`multi-agent-orchestration` is a Codex skill and local runtime harness for coordinating AI-assisted software work across Builder, QA, Security, Eval, Watchdog, Architect, Documentation, and Remediation roles.
+`multi-agent-orchestration` is an agent skill and provider-neutral local runtime harness for coordinating AI-assisted software work across Builder, QA, Security, Eval, Watchdog, Architect, Documentation, and Remediation roles. The skill is packaged for Codex (`agents/openai.yaml`), and the runtime harness drives whichever agent you configure — Codex CLI, Claude Code, prompt-only mode, or a custom command.
 
 The core invariant is simple: only one loop should write production code at a time. Reviewer loops can run in parallel, but production-code edits stay sequential and are governed through shared state, handoff packets, write-lock conventions, gates, and human approval requirements.
 
 ## What This Repository Contains
 
-- `SKILL.md` - the Codex skill instructions.
+- `SKILL.md` - the agent skill instructions.
 - `README.md` - this GitHub-facing overview.
 - `docs/operator-guide.md` - the detailed operator guide from the skill package.
+- `docs/example-run.md` - a real, captured end-to-end walkthrough on a throwaway repo.
 - `scripts/create_runtime_harness.py` - installs the runtime harness into a target repo.
 - `scripts/adopt_project.py` - one-command first-time adoption flow.
 - `scripts/smoke_test_runtime_harness.py` - validates the packaged harness.
@@ -25,11 +26,14 @@ The runtime harness creates an `orchestration/` folder with:
 - health, status, doctor, acceptance audit, and requirements-matrix checks
 - CI, release, phase, decision, and human approval gates
 - write-lock and file-guard conventions
+- a git pre-commit hook and CI check that enforce the production-code write lock
 - handoff packets and stop reports
 - eval fixtures/results and project-quality rubrics
 - provider adapter support for automatic detection, Codex CLI, Claude Code, prompt-only mode, or a custom command
 
 This is a local control plane. It does not replace CI, branch protection, code review, deployment review, security review, or human product ownership.
+
+The write-lock hook is installed automatically when the harness lands in a git repo. It fails a commit that changes production code without an active, in-scope write lock (or that touches a forbidden/preserved path), turning the single-writer invariant from a convention into an enforced gate. See the [Write-Lock Enforcement](assets/runtime-harness/orchestration/README.md#write-lock-enforcement) section for the CI companion and bypass details.
 
 ## Requirements
 
@@ -54,6 +58,22 @@ Smoke test passed.
 ```
 
 The smoke test creates temporary git repos, installs the harness, runs health and acceptance checks, records state, creates and resolves a blocker, and verifies the one-command adoption path.
+
+## Install The Commands (Optional)
+
+Install the skill in editable mode from a checkout to get short commands on your
+`PATH` instead of long `python3 scripts/...` invocations:
+
+```bash
+pip install -e .
+```
+
+This exposes `orchestration-init`, `orchestration-adopt`, and
+`orchestration-smoke-test`, which are drop-in replacements for the
+`python3 scripts/...` commands below. Editable install is the supported path
+because the commands resolve the packaged `assets/` template relative to the
+source tree, matching this skill's "clone or copy the folder" distribution
+model.
 
 ## Install The Harness Into A Repo
 
@@ -84,9 +104,9 @@ python3 scripts/adopt_project.py \
   --test-command "TEST COMMAND"
 ```
 
-## Use As A Codex Skill
+## Use As An Agent Skill
 
-Clone or copy this folder to a Codex skill path using the folder name `multi-agent-orchestration`, then invoke it with a prompt like:
+Clone or copy this folder to your agent's skill path using the folder name `multi-agent-orchestration` (the metadata in `agents/openai.yaml` registers it for Codex), then invoke it with a prompt like:
 
 ```text
 Use the multi-agent-orchestration skill to set up orchestration for this repo.

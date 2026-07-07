@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -59,7 +58,8 @@ def open_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
@@ -88,7 +88,9 @@ def security_required(args: argparse.Namespace, state: dict[str, Any]) -> bool:
     if isinstance(high_risk, list) and high_risk:
         return True
     phase_gate = state.get("phase_gate") if isinstance(state.get("phase_gate"), dict) else {}
-    requirements = " ".join(str(item).lower() for item in phase_gate.get("next_phase_requires") or [])
+    requirements = " ".join(
+        str(item).lower() for item in phase_gate.get("next_phase_requires") or []
+    )
     return "security" in requirements
 
 
@@ -184,9 +186,11 @@ def build_report(args: argparse.Namespace, state: dict[str, Any]) -> dict[str, A
         "blocking": blocking,
         "warnings": [],
         "recommended_next_action": (
-            f"Advance to {args.advance_to}." if decision == "PASS" and args.advance_to else
-            "Current phase may be marked complete." if decision == "PASS" else
-            f"Resolve blocking phase gate checks: {', '.join(item['name'] for item in blocking)}."
+            f"Advance to {args.advance_to}."
+            if decision == "PASS" and args.advance_to
+            else "Current phase may be marked complete."
+            if decision == "PASS"
+            else f"Resolve blocking phase gate checks: {', '.join(item['name'] for item in blocking)}."
         ),
     }
 
@@ -243,7 +247,9 @@ def print_text(report: dict[str, Any]) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--advance-to", default="", help="Advance current/authorized phase if gate passes.")
+    parser.add_argument(
+        "--advance-to", default="", help="Advance current/authorized phase if gate passes."
+    )
     parser.add_argument("--require-security", action="store_true")
     parser.add_argument("--skip-security", action="store_true")
     parser.add_argument("--require-human-approval", action="store_true")
@@ -251,7 +257,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--open-blocker", action="store_true")
     parser.add_argument("--write-report", action="store_true")
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--strict", action="store_true", help="Return nonzero unless phase gate verdict is PASS.")
+    parser.add_argument(
+        "--strict", action="store_true", help="Return nonzero unless phase gate verdict is PASS."
+    )
     return parser.parse_args()
 
 

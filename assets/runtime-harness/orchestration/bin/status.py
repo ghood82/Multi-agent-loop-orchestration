@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -52,7 +51,8 @@ def open_blockers(state: dict[str, Any]) -> list[Any]:
     return [
         blocker
         for blocker in blockers
-        if not isinstance(blocker, dict) or blocker.get("status", "open") not in {"resolved", "closed"}
+        if not isinstance(blocker, dict)
+        or blocker.get("status", "open") not in {"resolved", "closed"}
     ]
 
 
@@ -204,14 +204,20 @@ def build_snapshot(state: dict[str, Any], event_limit: int) -> dict[str, Any]:
             "warnings": health_check.get("warnings", []),
         },
         "watchdog": {
-            "last_verdict": verdict(watchdog.get("last_verdict", state.get("last_watchdog_verdict"))),
+            "last_verdict": verdict(
+                watchdog.get("last_verdict", state.get("last_watchdog_verdict"))
+            ),
             "product_quality_status": watchdog.get("product_quality_status", "TBD"),
             "eval_quality_status": watchdog.get("eval_quality_status", "TBD"),
             "process_integrity_status": watchdog.get("process_integrity_status", "TBD"),
         },
         "evals": {
-            "fixtures_count": len(state.get("eval_fixtures") or []) if isinstance(state.get("eval_fixtures"), list) else 0,
-            "results_count": len(state.get("eval_results") or []) if isinstance(state.get("eval_results"), list) else 0,
+            "fixtures_count": len(state.get("eval_fixtures") or [])
+            if isinstance(state.get("eval_fixtures"), list)
+            else 0,
+            "results_count": len(state.get("eval_results") or [])
+            if isinstance(state.get("eval_results"), list)
+            else 0,
             "last_fixture": state.get("last_eval_fixture", "TBD"),
             "last_result_artifact": state.get("last_eval_result_artifact", "TBD"),
             "last_result": state.get("last_eval_result", "TBD"),
@@ -230,7 +236,9 @@ def build_snapshot(state: dict[str, Any], event_limit: int) -> dict[str, Any]:
             "warnings": release_gate.get("warnings", []),
         },
         "phase_gate": {
-            "authorized_phase": phase_gate.get("authorized_phase", state.get("current_phase", "TBD")),
+            "authorized_phase": phase_gate.get(
+                "authorized_phase", state.get("current_phase", "TBD")
+            ),
             "last_decision": verdict(phase_gate.get("last_decision")),
             "last_checked_at": phase_gate.get("last_checked_at", "TBD"),
             "blocking": phase_gate.get("blocking", []),
@@ -322,7 +330,9 @@ def print_markdown(snapshot: dict[str, Any], report_path: Path | None) -> None:
     print(f"- Open blockers: {snapshot['blockers']['count']}")
     print(f"- Health check: {snapshot['health_check']['last_decision']}")
     print(f"- Watchdog: {snapshot['watchdog']['last_verdict']}")
-    print(f"- Eval results: {snapshot['evals']['results_count']} recorded; latest {snapshot['evals']['last_result']}")
+    print(
+        f"- Eval results: {snapshot['evals']['results_count']} recorded; latest {snapshot['evals']['last_result']}"
+    )
     print(f"- CI: {snapshot['ci_status']['conclusion']}")
     print(f"- Release gate: {snapshot['release_gate']['last_decision']}")
     print(f"- Human approvals: {snapshot['approvals']['count']}")
@@ -340,15 +350,25 @@ def print_markdown(snapshot: dict[str, Any], report_path: Path | None) -> None:
         print()
         print("## Recent Events")
         for event in snapshot["recent_events"]:
-            print(f"- {event.get('ts', 'TBD')} {event.get('role', 'TBD')}: {event.get('event', 'TBD')} {event.get('note', '')}")
+            print(
+                f"- {event.get('ts', 'TBD')} {event.get('role', 'TBD')}: {event.get('event', 'TBD')} {event.get('note', '')}"
+            )
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true", help="Print JSON instead of markdown.")
     parser.add_argument("--events", type=int, default=5, help="Number of recent events to include.")
-    parser.add_argument("--write-report", action="store_true", help="Write an operator-status report and update state.json.")
-    parser.add_argument("--strict", action="store_true", help="Return nonzero unless operating decision is CONTINUE.")
+    parser.add_argument(
+        "--write-report",
+        action="store_true",
+        help="Write an operator-status report and update state.json.",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Return nonzero unless operating decision is CONTINUE.",
+    )
     return parser.parse_args()
 
 
