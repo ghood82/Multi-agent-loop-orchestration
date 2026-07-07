@@ -1,0 +1,37 @@
+# Orchestration production-code write-lock check.
+#
+# Copy this file into your repository's .github/workflows/ to enforce the
+# write lock on pull requests as a second layer behind the local pre-commit
+# hook (a hook can be skipped with --no-verify; CI cannot).
+#
+#   cp orchestration/ci/write-lock-check.yml .github/workflows/
+#
+# By default this does NOT require an active lock for every PR (that would block
+# ordinary human contributions). It always blocks changes to forbidden files and
+# preserved components, and enforces the lock's allowed scope whenever a lock is
+# active. To require an active lock for all production-code changes, add
+# `--require-active-lock` to the command below.
+name: Write-lock check
+
+on:
+  pull_request:
+
+jobs:
+  write-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Enforce production-code write lock
+        run: |
+          python3 orchestration/bin/enforce-write-lock.py \
+            --against "origin/${{ github.base_ref }}" \
+            --json

@@ -25,11 +25,14 @@ The runtime harness creates an `orchestration/` folder with:
 - health, status, doctor, acceptance audit, and requirements-matrix checks
 - CI, release, phase, decision, and human approval gates
 - write-lock and file-guard conventions
+- a git pre-commit hook and CI check that enforce the production-code write lock
 - handoff packets and stop reports
 - eval fixtures/results and project-quality rubrics
 - provider adapter support for automatic detection, Codex CLI, Claude Code, prompt-only mode, or a custom command
 
 This is a local control plane. It does not replace CI, branch protection, code review, deployment review, security review, or human product ownership.
+
+The write-lock hook is installed automatically when the harness lands in a git repo. It fails a commit that changes production code without an active, in-scope write lock (or that touches a forbidden/preserved path), turning the single-writer invariant from a convention into an enforced gate. See the [Write-Lock Enforcement](assets/runtime-harness/orchestration/README.md#write-lock-enforcement) section for the CI companion and bypass details.
 
 ## Requirements
 
@@ -54,6 +57,22 @@ Smoke test passed.
 ```
 
 The smoke test creates temporary git repos, installs the harness, runs health and acceptance checks, records state, creates and resolves a blocker, and verifies the one-command adoption path.
+
+## Install The Commands (Optional)
+
+Install the skill in editable mode from a checkout to get short commands on your
+`PATH` instead of long `python3 scripts/...` invocations:
+
+```bash
+pip install -e .
+```
+
+This exposes `orchestration-init`, `orchestration-adopt`, and
+`orchestration-smoke-test`, which are drop-in replacements for the
+`python3 scripts/...` commands below. Editable install is the supported path
+because the commands resolve the packaged `assets/` template relative to the
+source tree, matching this skill's "clone or copy the folder" distribution
+model.
 
 ## Install The Harness Into A Repo
 

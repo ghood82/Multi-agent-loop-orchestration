@@ -114,6 +114,10 @@ def create_harness_command(args: argparse.Namespace, target: Path) -> list[str]:
     ]
     if args.force:
         command.append("--force")
+    if args.install_hooks is False:
+        command.append("--no-install-hooks")
+    elif args.install_hooks is True:
+        command.append("--install-hooks")
     return command
 
 
@@ -129,6 +133,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", default=".", help="Target repository root.")
     parser.add_argument("--force", action="store_true", help="Overwrite an existing orchestration harness.")
+    parser.add_argument("--install-hooks", dest="install_hooks", action="store_true", default=None, help="Install the write-lock git hook. Default: on when the target is a git repo.")
+    parser.add_argument("--no-install-hooks", dest="install_hooks", action="store_false", help="Skip installing the write-lock git hook.")
     parser.add_argument("--strict-readiness", action="store_true", help="Fail adoption unless the consolidated ops check passes.")
     parser.add_argument("--json", action="store_true", help="Print machine-readable adoption output.")
     parser.add_argument("--project-name")

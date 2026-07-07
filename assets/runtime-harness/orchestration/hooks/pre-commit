@@ -1,0 +1,27 @@
+#!/bin/sh
+# Multi-agent orchestration: production-code write-lock enforcement.
+#
+# Installed into .git/hooks/pre-commit by orchestration/bin/install-hooks.py.
+# Fails the commit when staged changes touch production code without an active,
+# in-scope write lock (or touch a forbidden / preserved-component path).
+#
+# Emergency bypass:
+#   ORCH_ALLOW_LOCK_OVERRIDE=1 git commit ...    # reported, still commits
+#   git commit --no-verify                       # skips all hooks
+#
+# This file is managed by the harness. A pre-existing pre-commit hook is
+# preserved as pre-commit.local and still runs after this check.
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+ENFORCER="$ROOT/orchestration/bin/enforce-write-lock.py"
+
+if [ -f "$ENFORCER" ]; then
+    python3 "$ENFORCER" --staged || exit $?
+fi
+
+HOOKS_DIR="$(git rev-parse --git-path hooks 2>/dev/null)"
+if [ -n "$HOOKS_DIR" ] && [ -x "$HOOKS_DIR/pre-commit.local" ]; then
+    "$HOOKS_DIR/pre-commit.local" "$@" || exit $?
+fi
+
+exit 0

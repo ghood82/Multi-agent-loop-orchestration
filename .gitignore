@@ -25,3 +25,4 @@ assets/runtime-harness/orchestration/reports/agent-runs/*.json
 
 dist/
 build/
+*.egg-info/

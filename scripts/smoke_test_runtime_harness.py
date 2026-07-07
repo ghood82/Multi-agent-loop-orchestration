@@ -897,6 +897,63 @@ def smoke_test(keep: bool) -> Path:
             label="strict status after blocker resolution",
         )
 
+        # Write-lock enforcement: hook install + engine verdicts.
+        for relative in [
+            "orchestration/bin/enforce-write-lock.py",
+            "orchestration/bin/install-hooks.py",
+            "orchestration/hooks/pre-commit",
+            "orchestration/ci/write-lock-check.yml",
+        ]:
+            assert_file(repo, relative)
+
+        # The hook is installed automatically when the harness lands in a git repo.
+        run(
+            [sys.executable, "orchestration/bin/install-hooks.py", "--check"],
+            repo,
+            label="write-lock hook installed",
+        )
+        assert_true(
+            (repo / ".git" / "hooks" / "pre-commit").exists(),
+            "pre-commit hook file exists",
+        )
+
+        def enforce(paths: list[str], *, require_active: bool) -> dict[str, Any]:
+            command = [
+                sys.executable,
+                "orchestration/bin/enforce-write-lock.py",
+                "--json",
+                "--require-active-lock" if require_active else "--no-require-active-lock",
+                "--paths",
+                *paths,
+            ]
+            # Exit code is 0 (ok) or 1 (violations); accept both, assert on JSON.
+            result = subprocess.run(command, cwd=repo, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+            if result.returncode not in {0, 1}:
+                raise AssertionError(f"enforce-write-lock returned {result.returncode}\n{result.stdout}")
+            return json.loads(result.stdout)
+
+        def set_lock(status: str, allowed: list[str]) -> None:
+            state = load_state(repo)
+            state["write_lock"] = {
+                "status": status,
+                "owner": "Builder",
+                "scope": "Phase 1",
+                "allowed_files": allowed,
+                "forbidden_files": [],
+            }
+            (repo / "orchestration" / "state.json").write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
+
+        set_lock("inactive", [])
+        assert_true(not enforce(["src/app.py"], require_active=True)["ok"], "inactive lock blocks production change")
+        assert_true(enforce(["docs/guide.md", "README.md"], require_active=True)["ok"], "docs changes never blocked")
+        assert_true(enforce(["src/app.py"], require_active=False)["ok"], "CI mode allows production without active lock")
+
+        set_lock("active", ["src/**"])
+        assert_true(enforce(["src/app.py"], require_active=True)["ok"], "active lock allows in-scope change")
+        out_of_scope = enforce(["lib/other.py"], require_active=True)
+        assert_true(not out_of_scope["ok"], "active lock blocks out-of-scope change")
+        assert_true(any("out of scope" in v for v in out_of_scope["violations"]), "out-of-scope violation is reported")
+
         passed = True
         return temp_root
     except Exception:

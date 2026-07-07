@@ -33,6 +33,12 @@ The file guard is a process-drift detector. It snapshots and checks changed file
 
 It is not an operating-system sandbox. Use git, branch protection, code owners, CI, and repository permissions as the real enforcement layers.
 
+## Write-Lock Enforcement Boundary
+
+`enforce-write-lock.py` is the git-boundary enforcement layer the file guard points to. Installed as a pre-commit hook and (optionally) run in CI, it fails a commit or pull request when a production-code change lands without an active, in-scope write lock, or touches a forbidden file or preserved component.
+
+It still is not a sandbox. A local hook can be skipped with `git commit --no-verify` or `ORCH_ALLOW_LOCK_OVERRIDE=1`, and it trusts the working-tree `state.json` as the source of truth for the current lock. It hardens the single-writer invariant against accidental and automated-loop violations; it does not defend against a determined operator who chooses to bypass it. Keep branch protection, required CI checks, and code review in place as the outer enforcement layers.
+
 ## Provider Boundary
 
 The agent adapter can resolve to Codex CLI, Claude Code, prompt-only mode, or a configured custom command. Prompt-only mode prepares artifacts but does not execute an agent.

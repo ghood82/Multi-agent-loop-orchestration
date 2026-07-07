@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -45,6 +47,19 @@ def parse_args() -> argparse.Namespace:
         "--force",
         action="store_true",
         help="Overwrite existing harness files.",
+    )
+    parser.add_argument(
+        "--install-hooks",
+        dest="install_hooks",
+        action="store_true",
+        default=None,
+        help="Install the write-lock git hook. Default: on when the target is a git repo.",
+    )
+    parser.add_argument(
+        "--no-install-hooks",
+        dest="install_hooks",
+        action="store_false",
+        help="Skip installing the write-lock git hook.",
     )
     return parser.parse_args()
 
@@ -114,7 +129,45 @@ def main() -> int:
     print(f"Created orchestration harness in {target_root}")
     for path in created:
         print(f"- {path.relative_to(target_root)}")
+
+    hooks_note = maybe_install_hooks(target_root, args.install_hooks)
+    if hooks_note:
+        print(hooks_note)
     return 0
+
+
+def is_git_repo(target_root: Path) -> bool:
+    result = subprocess.run(
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        cwd=target_root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+def maybe_install_hooks(target_root: Path, install_hooks: bool | None) -> str:
+    """Install the write-lock hook unless disabled or the target is not a git repo."""
+    if install_hooks is False:
+        return "Skipped git hook installation (--no-install-hooks)."
+    if not is_git_repo(target_root):
+        if install_hooks is True:
+            return "Skipped git hook installation: target is not a git repository."
+        return ""
+    installer = target_root / "orchestration" / "bin" / "install-hooks.py"
+    result = subprocess.run(
+        [sys.executable, str(installer), "--target", str(target_root)],
+        cwd=target_root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    if result.returncode != 0:
+        return f"Warning: git hook installation failed:\n{result.stdout.strip()}"
+    return result.stdout.strip()
 
 
 if __name__ == "__main__":
