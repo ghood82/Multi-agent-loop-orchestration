@@ -703,11 +703,28 @@ def refresh_ci_if_requested(root: Path, bin_dir: Path, args: argparse.Namespace)
     append_event(root, "CI Monitor", "refreshed_by_run_cycle", f"exit={result.returncode}")
 
 
+def defer_ci_refresh_until_after_write(args: argparse.Namespace) -> bool:
+    """CI for pushed/PR work is only meaningful after the branch or PR exists."""
+    return bool(args.watch_ci and (args.push or args.create_pr))
+
+
+def defer_release_gate_until_after_write(args: argparse.Namespace, defer_ci: bool) -> bool:
+    if not args.release_gate:
+        return False
+    if defer_ci and args.require_ci_pass:
+        return True
+    pr_scoped = args.release_mode in {"pr", "merge", "release"}
+    if pr_scoped and (args.push or args.create_pr) and not args.release_pr_from_file:
+        return True
+    return False
+
+
 def run_release_gate_if_requested(
     root: Path,
     bin_dir: Path,
     args: argparse.Namespace,
     action: str,
+    require_ci: bool | None = None,
 ) -> None:
     if not args.release_gate:
         return
@@ -721,7 +738,8 @@ def run_release_gate_if_requested(
         command.extend(["--pr", args.release_pr])
     if args.release_pr_from_file:
         command.extend(["--pr-from-file", args.release_pr_from_file])
-    if args.require_ci_pass:
+    release_requires_ci = args.require_ci_pass if require_ci is None else require_ci
+    if release_requires_ci:
         command.append("--require-ci-pass")
     if args.require_latest_eval_pass:
         command.append("--require-latest-eval-pass")
@@ -763,13 +781,14 @@ def enforce_strict_gates(
     bin_dir: Path,
     args: argparse.Namespace,
     action: str,
+    require_ci: bool | None = None,
 ) -> None:
     if not args.strict_gates:
         return
     reason = gate_failure_message(
         root,
         include_watchdog=True,
-        require_ci=args.require_ci_pass,
+        require_ci=args.require_ci_pass if require_ci is None else require_ci,
         require_eval=args.require_latest_eval_pass,
     )
     if reason:
@@ -780,11 +799,12 @@ def validate_pr_creation_gates(
     root: Path,
     bin_dir: Path,
     args: argparse.Namespace,
+    require_ci: bool | None = None,
 ) -> None:
     reason = gate_failure_message(
         root,
         include_watchdog=not args.skip_watchdog_pr_check,
-        require_ci=args.require_ci_pass,
+        require_ci=args.require_ci_pass if require_ci is None else require_ci,
         require_eval=args.require_latest_eval_pass,
         require_human_approval=args.require_human_approval,
     )
@@ -860,6 +880,9 @@ def main() -> int:
     apply_policy_defaults(root, args)
     repo = git_root(root)
     roles = [role.strip() for role in args.roles.split(",") if role.strip()]
+    defer_ci = defer_ci_refresh_until_after_write(args)
+    defer_release_gate = defer_release_gate_until_after_write(args, defer_ci)
+    pre_write_require_ci = False if defer_ci else None
 
     create_branch(repo, args)
     reports = run_roles(
@@ -878,21 +901,39 @@ def main() -> int:
         enabled=not args.no_normalize_reports,
     )
     dispatch_subagents_if_requested(root, bin_dir, roles, args)
-    refresh_ci_if_requested(root, bin_dir, args)
+    if not defer_ci:
+        refresh_ci_if_requested(root, bin_dir, args)
     sync_state_doc_if_requested(root, bin_dir, args)
     if args.commit_message:
-        run_release_gate_if_requested(root, bin_dir, args, "Commit")
-        enforce_strict_gates(root, bin_dir, args, "Commit")
+        if not defer_release_gate:
+            run_release_gate_if_requested(
+                root, bin_dir, args, "Commit", require_ci=pre_write_require_ci
+            )
+        enforce_strict_gates(root, bin_dir, args, "Commit", require_ci=pre_write_require_ci)
     commit_changes(repo, args)
     if args.push:
-        run_release_gate_if_requested(root, bin_dir, args, "Push")
-        enforce_strict_gates(root, bin_dir, args, "Push")
+        if not defer_release_gate:
+            run_release_gate_if_requested(
+                root, bin_dir, args, "Push", require_ci=pre_write_require_ci
+            )
+        enforce_strict_gates(root, bin_dir, args, "Push", require_ci=pre_write_require_ci)
     if args.create_pr:
-        run_release_gate_if_requested(root, bin_dir, args, "PR creation")
-        validate_pr_creation_gates(root, bin_dir, args)
-        enforce_strict_gates(root, bin_dir, args, "PR creation")
+        if not defer_release_gate:
+            run_release_gate_if_requested(
+                root, bin_dir, args, "PR creation", require_ci=pre_write_require_ci
+            )
+        validate_pr_creation_gates(root, bin_dir, args, require_ci=pre_write_require_ci)
+        enforce_strict_gates(root, bin_dir, args, "PR creation", require_ci=pre_write_require_ci)
     push_branch(repo, args)
     create_pr(repo, root, args)
+    if defer_ci:
+        refresh_ci_if_requested(root, bin_dir, args)
+    if defer_release_gate:
+        run_release_gate_if_requested(root, bin_dir, args, "Post-write validation")
+    if defer_ci and args.create_pr:
+        validate_pr_creation_gates(root, bin_dir, args, require_ci=True)
+    if defer_ci:
+        enforce_strict_gates(root, bin_dir, args, "Post-write validation", require_ci=True)
 
     print("Orchestration cycle complete.")
     for report in reports:

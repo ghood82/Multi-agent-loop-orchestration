@@ -256,7 +256,7 @@ def evaluate(
         )
 
     if pr_error:
-        if args.mode in {"merge", "release"}:
+        if args.mode in {"pr", "merge", "release"}:
             add_issue(blocking, f"Unable to read PR metadata: {pr_error}")
         else:
             add_issue(warnings, f"Unable to read PR metadata: {pr_error}")
