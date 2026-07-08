@@ -882,6 +882,7 @@ def main() -> int:
     roles = [role.strip() for role in args.roles.split(",") if role.strip()]
     defer_ci = defer_ci_refresh_until_after_write(args)
     defer_release_gate = defer_release_gate_until_after_write(args, defer_ci)
+    pre_write_require_ci = False if defer_ci else None
 
     create_branch(repo, args)
     reports = run_roles(
@@ -905,20 +906,24 @@ def main() -> int:
     sync_state_doc_if_requested(root, bin_dir, args)
     if args.commit_message:
         if not defer_release_gate:
-            run_release_gate_if_requested(root, bin_dir, args, "Commit", require_ci=not defer_ci)
-        enforce_strict_gates(root, bin_dir, args, "Commit", require_ci=not defer_ci)
+            run_release_gate_if_requested(
+                root, bin_dir, args, "Commit", require_ci=pre_write_require_ci
+            )
+        enforce_strict_gates(root, bin_dir, args, "Commit", require_ci=pre_write_require_ci)
     commit_changes(repo, args)
     if args.push:
         if not defer_release_gate:
-            run_release_gate_if_requested(root, bin_dir, args, "Push", require_ci=not defer_ci)
-        enforce_strict_gates(root, bin_dir, args, "Push", require_ci=not defer_ci)
+            run_release_gate_if_requested(
+                root, bin_dir, args, "Push", require_ci=pre_write_require_ci
+            )
+        enforce_strict_gates(root, bin_dir, args, "Push", require_ci=pre_write_require_ci)
     if args.create_pr:
         if not defer_release_gate:
             run_release_gate_if_requested(
-                root, bin_dir, args, "PR creation", require_ci=not defer_ci
+                root, bin_dir, args, "PR creation", require_ci=pre_write_require_ci
             )
-        validate_pr_creation_gates(root, bin_dir, args, require_ci=not defer_ci)
-        enforce_strict_gates(root, bin_dir, args, "PR creation", require_ci=not defer_ci)
+        validate_pr_creation_gates(root, bin_dir, args, require_ci=pre_write_require_ci)
+        enforce_strict_gates(root, bin_dir, args, "PR creation", require_ci=pre_write_require_ci)
     push_branch(repo, args)
     create_pr(repo, root, args)
     if defer_ci:

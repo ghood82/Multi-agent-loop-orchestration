@@ -104,3 +104,54 @@ def test_push_create_pr_watch_ci_refreshes_after_pr_before_ci_required_gate(
     assert events.index("watch-ci") < events.index("validate-pr:True")
     assert "validate-pr:False" in events
     assert events.index("validate-pr:False") < events.index("push")
+
+
+def test_non_deferred_path_preserves_default_ci_gate_behavior(monkeypatch, tmp_path: Path):
+    args = cycle_args(watch_ci=False, require_ci_pass=False)
+    events: list[str] = []
+
+    monkeypatch.setattr(rc, "parse_args", lambda: args)
+    monkeypatch.setattr(rc, "apply_policy_defaults", lambda root, args: events.append("policy"))
+    monkeypatch.setattr(rc, "git_root", lambda root: tmp_path)
+    monkeypatch.setattr(rc, "create_branch", lambda repo, args: events.append("create-branch"))
+    monkeypatch.setattr(rc, "run_roles", lambda *a, **kw: events.append("roles") or [])
+    monkeypatch.setattr(rc, "normalize_reports", lambda *a, **kw: events.append("normalize") or [])
+    monkeypatch.setattr(
+        rc, "dispatch_subagents_if_requested", lambda *a: events.append("subagents")
+    )
+    monkeypatch.setattr(rc, "sync_state_doc_if_requested", lambda *a: events.append("sync-state"))
+    monkeypatch.setattr(rc, "commit_changes", lambda repo, args: events.append("commit"))
+    monkeypatch.setattr(rc, "push_branch", lambda repo, args: events.append("push"))
+    monkeypatch.setattr(rc, "create_pr", lambda repo, root, args: events.append("create-pr"))
+    monkeypatch.setattr(
+        rc,
+        "refresh_ci_if_requested",
+        lambda root, bin_dir, args: events.append("watch-ci") if args.watch_ci else None,
+    )
+    monkeypatch.setattr(
+        rc,
+        "run_release_gate_if_requested",
+        lambda root, bin_dir, args, action, require_ci=None: events.append(
+            f"release:{action}:{require_ci}"
+        ),
+    )
+    monkeypatch.setattr(
+        rc,
+        "validate_pr_creation_gates",
+        lambda root, bin_dir, args, require_ci=None: events.append(f"validate-pr:{require_ci}"),
+    )
+    monkeypatch.setattr(
+        rc,
+        "enforce_strict_gates",
+        lambda root, bin_dir, args, action, require_ci=None: events.append(
+            f"strict:{action}:{require_ci}"
+        ),
+    )
+
+    assert rc.main() == 0
+
+    assert "watch-ci" not in events
+    assert "validate-pr:None" in events
+    assert "strict:PR creation:None" in events
+    assert events.index("validate-pr:None") < events.index("push") < events.index("create-pr")
+    assert "validate-pr:True" not in events
