@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from _helpers import load_source, ns
 
 rg = load_source("release_gate", "release-gate.py")
@@ -17,6 +19,8 @@ def args(**kw):
         "allow_draft_pr": False,
         "allow_review_pending": False,
         "strict_file_guard": False,
+        "pr": "",
+        "pr_from_file": "",
     }
     base.update(kw)
     return ns(**base)
@@ -85,3 +89,10 @@ def test_pr_mode_blocks_when_pr_metadata_missing():
     assert decision == "STOP"
     assert any("Unable to read PR metadata" in item for item in blocking)
     assert warnings == []
+
+
+def test_load_pr_missing_file_returns_structured_error(tmp_path: Path):
+    pr, error = rg.load_pr(args(mode="pr", pr_from_file=str(tmp_path / "missing-pr.json")))
+
+    assert pr == {}
+    assert "Unable to read PR metadata file" in error
