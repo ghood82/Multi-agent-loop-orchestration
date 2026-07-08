@@ -547,7 +547,7 @@ The daemon:
 - Advances the queue only after the role succeeds.
 - Pauses on open blockers by default.
 - Routes non-`PASS` Watchdog verdicts to Blocker Remediation.
-- Can refresh CI/PR check state before gated actions when run with `--watch-ci`.
+- Can refresh CI/PR check state before gated actions, or after push/PR creation when that evidence does not exist yet, when run with `--watch-ci`.
 - Can dispatch read-only specialist subagents for the current role when run with `--dispatch-subagents`.
 - Can run resume planning before choosing the next role when run with `--resume-plan`.
 - Records daemon activity in `events.log`.
@@ -612,7 +612,7 @@ The cycle adapter is safe by default:
 - With `--require-human-approval`, PR creation also requires an approved artifact in `orchestration/approvals/`.
 - It runs the file guard by default around each role. Builder and Remediation may write within policy; Docs may write docs/memory/markdown; QA, Security, Eval, Architect, Watchdog, and subagents are read-only for repo files.
 - File guard violations are recorded in `file_guard_checks` and can open blockers automatically.
-- It can run the release gate before commit, push, or PR creation with `--release-gate`.
+- It can run the release gate before commit, push, or PR creation, or after push/PR creation when PR/CI evidence must exist first, with `--release-gate`.
 
 Prepare Watchdog evidence before a final quality verdict:
 

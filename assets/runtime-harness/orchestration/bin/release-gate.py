@@ -209,6 +209,8 @@ def load_pr(args: argparse.Namespace) -> tuple[dict[str, Any], str]:
     if args.pr_from_file:
         try:
             return json.loads(Path(args.pr_from_file).read_text()), ""
+        except OSError as exc:
+            return {}, f"Unable to read PR metadata file: {exc}"
         except json.JSONDecodeError as exc:
             return {}, f"PR metadata file was not JSON: {exc}"
     if args.mode in {"pr", "merge", "release"}:

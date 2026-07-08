@@ -15,6 +15,7 @@ import shutil
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 ROLE_SCRIPTS = {
     "builder": "run-builder.sh",
@@ -100,7 +101,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--strict-gates",
         action="store_true",
-        help="Block commit, push, and PR creation unless open_blockers is empty and Watchdog verdict is PASS.",
+        help="Block git writes unless configured orchestration gates pass.",
     )
     parser.add_argument(
         "--remediate-on-gate-failure",
@@ -130,7 +131,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--watch-ci",
         action="store_true",
-        help="Refresh PR check status with watch-ci.py before CI-gated actions.",
+        help="Refresh PR check status with watch-ci.py; push/PR flows refresh after the PR target exists.",
     )
     parser.add_argument(
         "--ci-pr",
@@ -201,7 +202,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--release-gate",
         action="store_true",
-        help="Run release-gate.py before git write/PR actions.",
+        help="Run release-gate.py before or after git write/PR actions, depending on when gate evidence exists.",
     )
     parser.add_argument(
         "--release-mode",
@@ -436,7 +437,7 @@ def latest_watchdog_report(root: Path) -> Path | None:
     return reports[-1] if reports else None
 
 
-def load_state(root: Path) -> dict:
+def load_state(root: Path) -> dict[str, Any]:
     state_file = root / "state.json"
     if not state_file.exists():
         raise SystemExit(f"Missing orchestration state file: {state_file}")
@@ -446,7 +447,11 @@ def load_state(root: Path) -> dict:
         raise SystemExit(f"Invalid orchestration state JSON: {exc}") from exc
 
 
-def load_policy(root: Path, args: argparse.Namespace) -> dict:
+def save_state(root: Path, state: dict[str, Any]) -> None:
+    (root / "state.json").write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
+
+
+def load_policy(root: Path, args: argparse.Namespace) -> dict[str, Any]:
     if args.no_policy:
         return {}
     path = Path(args.policy)
@@ -467,8 +472,10 @@ def apply_policy_defaults(root: Path, args: argparse.Namespace) -> None:
     policy = load_policy(root, args)
     if not policy:
         return
-    gates = policy.get("gates") if isinstance(policy.get("gates"), dict) else {}
-    cycle = policy.get("run_cycle") if isinstance(policy.get("run_cycle"), dict) else {}
+    raw_gates = policy.get("gates")
+    raw_cycle = policy.get("run_cycle")
+    gates: dict[str, Any] = raw_gates if isinstance(raw_gates, dict) else {}
+    cycle: dict[str, Any] = raw_cycle if isinstance(raw_cycle, dict) else {}
     args.require_ci_pass = args.require_ci_pass or bool(gates.get("require_ci_pass"))
     args.require_latest_eval_pass = args.require_latest_eval_pass or bool(
         gates.get("require_latest_eval_pass")
@@ -501,7 +508,7 @@ def apply_policy_defaults(root: Path, args: argparse.Namespace) -> None:
     state.setdefault("operating_policy", {})["last_loaded_at"] = datetime.now(
         timezone.utc
     ).isoformat()
-    (root / "state.json").write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
+    save_state(root, state)
 
 
 def open_blockers(root: Path) -> list[str]:
@@ -703,6 +710,52 @@ def refresh_ci_if_requested(root: Path, bin_dir: Path, args: argparse.Namespace)
     append_event(root, "CI Monitor", "refreshed_by_run_cycle", f"exit={result.returncode}")
 
 
+def pr_ref_from_create_output(output: str) -> str:
+    for token in output.split():
+        cleaned = token.strip().strip(".,;")
+        if re.match(r"^https?://\S+/pull/\d+/?$", cleaned):
+            return cleaned.rstrip("/")
+    return ""
+
+
+def gh_current_pr_ref(repo: Path) -> str:
+    result = run(
+        ["gh", "pr", "view", "--json", "number,url"],
+        repo,
+        check=False,
+    )
+    if result.returncode != 0:
+        return ""
+    try:
+        pr = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return ""
+    url = str(pr.get("url") or "").strip()
+    if url:
+        return url
+    number = pr.get("number")
+    return str(number).strip() if number is not None else ""
+
+
+def record_active_pr(root: Path, branch: str, pr_ref: str) -> None:
+    if not pr_ref:
+        return
+    state = load_state(root)
+    state["active_branch"] = branch
+    state["active_pr"] = pr_ref
+    save_state(root, state)
+    append_event(root, "GitHub PR", "active_pr_recorded", pr_ref)
+
+
+def apply_created_pr_reference(args: argparse.Namespace, pr_ref: str | None) -> None:
+    if not pr_ref:
+        return
+    if not args.ci_pr:
+        args.ci_pr = pr_ref
+    if not args.release_pr and not args.release_pr_from_file:
+        args.release_pr = pr_ref
+
+
 def defer_ci_refresh_until_after_write(args: argparse.Namespace) -> bool:
     """CI for pushed/PR work is only meaningful after the branch or PR exists."""
     return bool(args.watch_ci and (args.push or args.create_pr))
@@ -847,9 +900,9 @@ def push_branch(repo: Path, args: argparse.Namespace) -> None:
     run(["git", "push", "-u", "origin", branch], repo)
 
 
-def create_pr(repo: Path, root: Path, args: argparse.Namespace) -> None:
+def create_pr(repo: Path, root: Path, args: argparse.Namespace) -> str:
     if not args.create_pr:
-        return
+        return ""
     require_git_write(args, "PR creation")
     if not args.push:
         raise SystemExit("--create-pr requires --push.")
@@ -870,7 +923,11 @@ def create_pr(repo: Path, root: Path, args: argparse.Namespace) -> None:
     command = ["gh", "pr", "create", "--draft", "--title", title, "--body", "\n".join(body)]
     if args.base:
         command.extend(["--base", args.base])
-    run(command, repo)
+    result = run(command, repo)
+    print(result.stdout, end="")
+    pr_ref = pr_ref_from_create_output(result.stdout) or gh_current_pr_ref(repo)
+    record_active_pr(root, branch, pr_ref)
+    return pr_ref
 
 
 def main() -> int:
@@ -925,7 +982,8 @@ def main() -> int:
         validate_pr_creation_gates(root, bin_dir, args, require_ci=pre_write_require_ci)
         enforce_strict_gates(root, bin_dir, args, "PR creation", require_ci=pre_write_require_ci)
     push_branch(repo, args)
-    create_pr(repo, root, args)
+    created_pr = create_pr(repo, root, args)
+    apply_created_pr_reference(args, created_pr)
     if defer_ci:
         refresh_ci_if_requested(root, bin_dir, args)
     if defer_release_gate:
