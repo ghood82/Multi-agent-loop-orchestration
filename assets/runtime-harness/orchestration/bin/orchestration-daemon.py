@@ -57,6 +57,13 @@ def parse_args() -> argparse.Namespace:
         default=0.0,
         help="Stop the loop after this many seconds of wall-clock time (0 = unlimited).",
     )
+    parser.add_argument(
+        "--require-role-completion",
+        action="store_true",
+        help="Only advance the queue when a role produced a real completion signal "
+        "(a fresh verdict for the current HEAD, or a new commit for Builder/Remediation). "
+        "Prevents a no-op/prompt-only run from walking the queue with no actual work.",
+    )
     parser.add_argument("--agent-command", default=os.environ.get("AGENT_COMMAND", ""))
     parser.add_argument("--strict-gates", action="store_true")
     parser.add_argument("--require-ci-pass", action="store_true")
@@ -189,6 +196,45 @@ def remediation_exhausted(state: dict[str, Any], cap: int) -> bool:
     return cap > 0 and remediation_attempts(state) >= cap
 
 
+WRITE_ROLES = {"builder", "remediation"}
+VERDICT_ROLES = {"qa", "security", "eval", "eval-builder", "watchdog", "architect", "docs"}
+
+
+def git_head() -> str:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def fresh_verdict(state: dict[str, Any], role: str, head: str) -> bool:
+    """True if the role recorded a verdict bound to the current HEAD."""
+    verdicts = state.get("role_verdicts")
+    entry = verdicts.get(role) if isinstance(verdicts, dict) else None
+    if not isinstance(entry, dict) or not str(entry.get("verdict") or "").strip():
+        return False
+    commit = str(entry.get("commit") or "")
+    # A verdict counts when it is bound to the current commit; when there is no
+    # HEAD yet (no commits), we cannot bind, so a recorded verdict suffices.
+    return commit == head or not head
+
+
+def role_completed(role: str, state: dict[str, Any], head_before: str, head_after: str) -> bool:
+    """Did the role produce a real completion signal (verdict or, for writers, a commit)?"""
+    if role in WRITE_ROLES:
+        if head_after and head_after != head_before:
+            return True  # produced a commit
+        return fresh_verdict(state, role, head_after)
+    if role in VERDICT_ROLES:
+        return fresh_verdict(state, role, head_after)
+    return True  # unknown role: do not block
+
+
 def run_role(role: str, args: argparse.Namespace) -> subprocess.CompletedProcess[str]:
     command = ["bash", str(BIN_DIR / "run-cycle.sh"), "--roles", role]
     if args.agent_command:
@@ -297,12 +343,29 @@ def step(args: argparse.Namespace) -> bool:
     save_state(state)
     log_event("Daemon", "role_started", role)
 
+    head_before = git_head()
     result = run_role(role, args)
     print(result.stdout, end="")
 
     state = load_state()
     daemon = state.setdefault("daemon", {})
     if result.returncode == 0:
+        # Only advance the queue when the role actually did something (a fresh
+        # verdict, or a commit for writers). Prevents a no-op run from walking
+        # the queue with no real work.
+        if args.require_role_completion and not role_completed(
+            role, state, head_before, git_head()
+        ):
+            daemon["status"] = "paused_incomplete"
+            daemon["last_role"] = role
+            daemon["last_run_at"] = now()
+            save_state(state)
+            log_event("Daemon", "paused_incomplete", f"{role} produced no verdict or commit")
+            print(
+                f"Daemon paused: {role} produced no completion signal "
+                "(no fresh verdict or commit); not advancing."
+            )
+            return False
         advance_cursor(state, role)
         # Count consecutive remediations; any productive (non-remediation) run
         # means progress, so reset the counter.
