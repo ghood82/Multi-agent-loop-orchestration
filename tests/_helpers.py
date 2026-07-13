@@ -28,6 +28,10 @@ CREATE_HARNESS = SCRIPTS / "create_runtime_harness.py"
 
 def load_source(module_name: str, filename: str) -> ModuleType:
     """Import a (possibly hyphen-named) bin script by file path."""
+    # The scripts import sibling modules (e.g. orchestration_state); make the bin
+    # dir importable, as it is when a script runs as `python3 bin/<script>.py`.
+    if str(BIN) not in sys.path:
+        sys.path.insert(0, str(BIN))
     path = BIN / filename
     spec = importlib.util.spec_from_file_location(module_name, path)
     assert spec and spec.loader, f"cannot load {path}"

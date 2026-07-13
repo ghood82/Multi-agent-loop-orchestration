@@ -1,0 +1,3 @@
+# Runtime state-lock and atomic-write temp files (orchestration_state.py).
+.state.lock
+.state.*.tmp

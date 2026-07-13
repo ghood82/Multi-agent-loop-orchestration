@@ -250,6 +250,15 @@ Eval result artifacts live under `orchestration/evals/results/`. Eval Monitor mu
 
 Subagents are read-only specialists by default. They may inspect and report findings, but they must not edit production files unless the active loop has explicit authorization and Builder owns the production-code write lock.
 
+## Concurrency-Safe State
+
+`state.json` is the shared source of truth, and several processes can touch it at once — the daemon, a hand-run command, and parallel subagents. Writes go through `orchestration_state.py`, which:
+
+- writes atomically (temp file + `os.replace`), so a reader never sees a half-written, invalid file; and
+- holds an advisory `flock` across each read-modify-write, so concurrent processes serialize instead of silently clobbering one another's blockers, verdicts, or reports.
+
+The lock is held from `load_state()` until the matching `save_state()` (or process exit). The runtime lock/temp files (`.state.lock`, `.state.*.tmp`) are git-ignored. On non-POSIX platforms without `flock`, writes stay atomic but are not cross-process locked.
+
 ## File Guard
 
 The file guard is a process-drift detector, not an operating-system sandbox. It snapshots files before each role, checks what changed afterward, records violations, and can open blockers when a read-only role or subagent changes files it should not touch. It helps stop unsafe handoffs, but it does not replace branch protection, CI, code review, or filesystem permissions.

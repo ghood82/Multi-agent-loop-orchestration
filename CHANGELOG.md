@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 - 2026-07-13
+
+- Added `orchestration_state.py`: concurrency-safe state access with atomic writes (temp file + `os.replace`) and a re-entrant advisory `flock` held across each read-modify-write, so concurrent processes (daemon, hand-run scripts, parallel subagents) no longer silently clobber each other's `state.json` updates or leave a half-written file.
+- Migrated the integrity-critical state mutators — `update-state.py`, `normalize-report.py`, `write-lock.py`, `decision-gate.py`, `phase-gate.py`, `release-gate.py` — to the shared locked/atomic helpers.
+- Added a concurrency test proving 20 racing writers lose no updates (the same scenario dropped ~60% of writes before the lock), plus unit tests for atomic write, round-trip, and re-entrancy.
+- Runtime lock/temp files (`.state.lock`, `.state.*.tmp`) are git-ignored.
+
 ## 0.3.0 - 2026-07-13
 
 - Added a machine-readable result contract: roles emit an `orchestration-result` JSON block that `normalize-report.py` treats as authoritative instead of scraping verdicts from prose. Every role prompt now appends the contract.

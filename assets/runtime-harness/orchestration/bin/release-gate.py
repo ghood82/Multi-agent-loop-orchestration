@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import orchestration_state as ostate
+
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -57,10 +59,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_state() -> dict[str, Any]:
-    try:
-        return json.loads(STATE_FILE.read_text())
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Invalid state JSON: {exc}") from exc
+    # Acquires the shared advisory lock; held across the read-modify-write until
+    # save_state (or process exit).
+    return ostate.begin(STATE_FILE)
 
 
 def load_policy(args: argparse.Namespace) -> dict[str, Any]:
@@ -100,7 +101,7 @@ def apply_policy(args: argparse.Namespace, policy: dict[str, Any]) -> None:
 
 
 def save_state(state: dict[str, Any]) -> None:
-    STATE_FILE.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
+    ostate.commit(STATE_FILE, state)
 
 
 def log_event(role: str, event: str, note: str = "") -> None:
