@@ -77,9 +77,31 @@ with path.open("a") as handle:
 PY
 }
 
+# The machine-readable result contract every role appends to its prompt so the
+# orchestrator records a verdict from a structured block instead of guessing
+# from prose. normalize-report.py --require-structured enforces it.
+read -r -d '' RESULT_CONTRACT <<'CONTRACT' || true
+---
+At the very end of your report, output a machine-readable result block with this
+exact fenced tag so the orchestrator can record your verdict without guessing:
+
+```orchestration-result
+{"verdict": "PASS", "summary": "one line", "blockers": [], "tests": [], "risks": []}
+```
+
+Use verdict PASS (or APPROVED) only when the work meets the bar; otherwise use
+REQUEST_FIXES, FAIL, BLOCKED, or STOP and list each blocker explicitly.
+CONTRACT
+
+emit_result_contract() {
+  local prompt_file="$1"
+  printf '\n%s\n' "$RESULT_CONTRACT" >> "$prompt_file"
+}
+
 run_agent_or_print() {
   local prompt_file="$1"
   local role="${2:-agent}"
+  emit_result_contract "$prompt_file"
   python3 "${ROOT_DIR}/bin/agent-adapter.py" --role "$role" --prompt-file "$prompt_file"
 }
 

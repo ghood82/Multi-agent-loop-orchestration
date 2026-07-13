@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - 2026-07-13
+
+- Added a machine-readable result contract: roles emit an `orchestration-result` JSON block that `normalize-report.py` treats as authoritative instead of scraping verdicts from prose. Every role prompt now appends the contract.
+- `normalize-report.py --require-structured` (and `run-cycle.py --require-structured` / `gates.require_structured`) fail a role and open a blocker when the block is missing or malformed, so a role cannot silently pass without a real verdict.
+- Verdicts are stamped with the commit SHA they reviewed (`state.json` `role_verdicts`), and `run-cycle.py --require-fresh-evidence` (/ `gates.require_fresh_evidence`) blocks strict-gated actions when a required verdict is not bound to the current HEAD — closing the stale-evidence gap where a PASS for an old commit could gate newer code.
+- Added tests covering contract parsing, structured-vs-prose precedence, SHA stamping, and evidence freshness.
+
 ## 0.2.0 - 2026-07-07
 
 - Added `enforce-write-lock.py`: git-boundary enforcement of the production-code write lock (staged, base-ref, range, and explicit-path modes).
