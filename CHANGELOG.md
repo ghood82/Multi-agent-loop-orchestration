@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 - 2026-07-13
+
+- Added loop/cost budget guards to the daemon: `--max-remediation-attempts` bounds the remediation<->re-fail loop (it pauses with `daemon.status = paused_budget` for a human instead of spinning forever on an unresolvable blocker), and `--max-wall-seconds` caps wall-clock time. Both default to unlimited, so existing behavior is unchanged unless opted in.
+- The daemon now tracks consecutive `remediation_attempts` in state (reset when a productive non-remediation role runs).
+- Added tests: the budget predicate plus an end-to-end check that an unresolvable blocker stops the daemon after the allowed number of remediations instead of looping.
+
 ## 0.4.0 - 2026-07-13
 
 - Added `orchestration_state.py`: concurrency-safe state access with atomic writes (temp file + `os.replace`) and a re-entrant advisory `flock` held across each read-modify-write, so concurrent processes (daemon, hand-run scripts, parallel subagents) no longer silently clobber each other's `state.json` updates or leave a half-written file.

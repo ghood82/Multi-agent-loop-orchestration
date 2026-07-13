@@ -44,6 +44,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-steps", type=int, default=1)
     parser.add_argument("--continuous", action="store_true")
     parser.add_argument("--sleep-seconds", type=float, default=30.0)
+    parser.add_argument(
+        "--max-remediation-attempts",
+        type=int,
+        default=0,
+        help="Pause for a human after this many consecutive remediation runs (0 = unlimited). "
+        "Bounds the remediation<->re-fail loop on an unresolvable blocker.",
+    )
+    parser.add_argument(
+        "--max-wall-seconds",
+        type=float,
+        default=0.0,
+        help="Stop the loop after this many seconds of wall-clock time (0 = unlimited).",
+    )
     parser.add_argument("--agent-command", default=os.environ.get("AGENT_COMMAND", ""))
     parser.add_argument("--strict-gates", action="store_true")
     parser.add_argument("--require-ci-pass", action="store_true")
@@ -163,6 +176,19 @@ def advance_cursor(state: dict[str, Any], role: str) -> None:
         state.setdefault("daemon", {})["cursor"] = (cursor + 1) % len(queue)
 
 
+def remediation_attempts(state: dict[str, Any]) -> int:
+    value = state.get("daemon", {}).get("remediation_attempts", 0)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def remediation_exhausted(state: dict[str, Any], cap: int) -> bool:
+    """True when consecutive remediation runs have hit the operator's cap."""
+    return cap > 0 and remediation_attempts(state) >= cap
+
+
 def run_role(role: str, args: argparse.Namespace) -> subprocess.CompletedProcess[str]:
     command = ["bash", str(BIN_DIR / "run-cycle.sh"), "--roles", role]
     if args.agent_command:
@@ -253,6 +279,18 @@ def step(args: argparse.Namespace) -> bool:
         print("Daemon paused: open blockers present.")
         return False
 
+    # Budget: bound the remediation<->re-fail loop so an unresolvable blocker
+    # stops for a human instead of spinning (and burning agent spend) forever.
+    if role == "remediation" and remediation_exhausted(state, args.max_remediation_attempts):
+        attempts = remediation_attempts(state)
+        state.setdefault("daemon", {})["status"] = "paused_budget"
+        state["daemon"]["last_run_at"] = now()
+        save_state(state)
+        note = f"{attempts}/{args.max_remediation_attempts} remediation attempts; human decision required"
+        log_event("Daemon", "paused_budget", note)
+        print(f"Daemon paused: remediation budget exhausted ({note}).")
+        return False
+
     state.setdefault("daemon", {})["status"] = "running"
     state["daemon"]["last_role"] = role
     state["daemon"]["last_run_at"] = now()
@@ -263,15 +301,22 @@ def step(args: argparse.Namespace) -> bool:
     print(result.stdout, end="")
 
     state = load_state()
+    daemon = state.setdefault("daemon", {})
     if result.returncode == 0:
         advance_cursor(state, role)
-        state.setdefault("daemon", {})["status"] = "idle"
+        # Count consecutive remediations; any productive (non-remediation) run
+        # means progress, so reset the counter.
+        if role == "remediation":
+            daemon["remediation_attempts"] = remediation_attempts(state) + 1
+        else:
+            daemon["remediation_attempts"] = 0
+        daemon["status"] = "idle"
         log_event("Daemon", "role_completed", role)
     else:
-        state.setdefault("daemon", {})["status"] = "paused_error"
+        daemon["status"] = "paused_error"
         log_event("Daemon", "role_failed", f"{role} exit={result.returncode}")
-    state["daemon"]["last_role"] = role
-    state["daemon"]["last_run_at"] = now()
+    daemon["last_role"] = role
+    daemon["last_run_at"] = now()
     save_state(state)
     return result.returncode == 0
 
@@ -281,6 +326,7 @@ def main() -> int:
     if args.resume_plan:
         run_resume_plan(args)
     steps = 0
+    start = time.monotonic()
     while True:
         ok = step(args)
         steps += 1
@@ -289,6 +335,12 @@ def main() -> int:
         if not args.continuous and steps >= args.max_steps:
             return 0
         if args.continuous and args.max_steps and steps >= args.max_steps:
+            return 0
+        if args.max_wall_seconds > 0 and (time.monotonic() - start) >= args.max_wall_seconds:
+            log_event(
+                "Daemon", "paused_budget", f"wall-clock budget reached ({args.max_wall_seconds}s)"
+            )
+            print(f"Daemon stopped: wall-clock budget reached ({args.max_wall_seconds}s).")
             return 0
         time.sleep(args.sleep_seconds)
 

@@ -53,6 +53,17 @@ python3 orchestration/bin/status.py --write-report
 python3 orchestration/bin/handoff-packet.py --write --write-report
 ```
 
+For longer autonomous runs, bound the loop so it stops for a human instead of spinning (and burning agent spend) on an unresolvable blocker:
+
+```bash
+bash orchestration/bin/orchestration-daemon.sh --continuous \
+  --max-remediation-attempts 3 \   # pause after 3 consecutive remediation runs
+  --max-wall-seconds 1800 \        # stop after 30 minutes of wall-clock time
+  --max-steps 50                   # hard cap on total role executions
+```
+
+When the remediation budget is hit the daemon records `daemon.status = paused_budget` and stops. All budgets default to unlimited (`0`), so existing behavior is unchanged unless you opt in.
+
 ## Agent Adapter
 
 Role runners use `orchestration/bin/agent-adapter.py`. The default provider is `auto`, which resolves to Codex CLI when `codex` is installed, then Claude Code when `claude` is installed, then `prompt-only` when neither runtime is available.
