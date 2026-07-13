@@ -79,11 +79,14 @@ files = [
     "scripts/smoke_test_runtime_harness.py",
     "assets/runtime-harness/orchestration/bin/enforce-write-lock.py",
     "assets/runtime-harness/orchestration/bin/install-hooks.py",
+    "assets/runtime-harness/orchestration/bin/orchestration_state.py",
     "assets/runtime-harness/orchestration/bin/release-gate.py",
     "assets/runtime-harness/orchestration/bin/run-cycle.py",
     "assets/runtime-harness/orchestration/bin/watch-ci.py",
     "assets/runtime-harness/orchestration/bin/write-lock.py",
 ]
+# So the hyphen-named scripts can resolve `import orchestration_state`.
+mypy_path = ["assets/runtime-harness/orchestration/bin"]
 python_version = "3.10"
 ignore_missing_imports = true
 warn_unused_ignores = true

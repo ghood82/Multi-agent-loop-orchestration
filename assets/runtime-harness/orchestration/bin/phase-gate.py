@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import orchestration_state as ostate
+
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
@@ -26,19 +28,13 @@ def compact_ts() -> str:
 
 
 def load_state() -> dict[str, Any]:
-    try:
-        state = json.loads(STATE_FILE.read_text())
-    except FileNotFoundError as exc:
-        raise SystemExit(f"Missing state file: {STATE_FILE}") from exc
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Invalid state JSON: {exc}") from exc
-    if not isinstance(state, dict):
-        raise SystemExit("state.json must contain an object.")
-    return state
+    # Acquires the shared advisory lock; held across the read-modify-write until
+    # save_state (or process exit).
+    return ostate.begin(STATE_FILE)
 
 
 def save_state(state: dict[str, Any]) -> None:
-    STATE_FILE.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
+    ostate.commit(STATE_FILE, state)
 
 
 def log_event(event: str, note: str = "") -> None:
