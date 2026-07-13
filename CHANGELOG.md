@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0 - 2026-07-13
+
+- Added `--require-role-completion` to the daemon: the queue advances only when a role produced a real completion signal — a fresh verdict bound to the current HEAD (via the result contract), or a new commit for Builder/Remediation — instead of on the shell exit code alone. A no-op or prompt-only run now records `daemon.status = paused_incomplete` and stops instead of walking the queue with no work done. Off by default (backward compatible).
+- Added unit tests for the completion predicate (writer-commit, fresh/stale/missing verdict, unknown role) and end-to-end tests that a no-op builder pauses while the default path still advances.
+
 ## 0.5.0 - 2026-07-13
 
 - Added loop/cost budget guards to the daemon: `--max-remediation-attempts` bounds the remediation<->re-fail loop (it pauses with `daemon.status = paused_budget` for a human instead of spinning forever on an unresolvable blocker), and `--max-wall-seconds` caps wall-clock time. Both default to unlimited, so existing behavior is unchanged unless opted in.

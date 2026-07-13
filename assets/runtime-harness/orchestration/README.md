@@ -64,6 +64,14 @@ bash orchestration/bin/orchestration-daemon.sh --continuous \
 
 When the remediation budget is hit the daemon records `daemon.status = paused_budget` and stops. All budgets default to unlimited (`0`), so existing behavior is unchanged unless you opt in.
 
+Require real work before advancing so a no-op or prompt-only run cannot walk the queue with nothing to show:
+
+```bash
+bash orchestration/bin/orchestration-daemon.sh --continuous --require-role-completion
+```
+
+With `--require-role-completion`, the daemon advances only when the role produced a completion signal — a fresh verdict bound to the current HEAD (recorded via the result contract), or a new commit for Builder/Remediation. Otherwise it records `daemon.status = paused_incomplete` and stops. Off by default.
+
 ## Agent Adapter
 
 Role runners use `orchestration/bin/agent-adapter.py`. The default provider is `auto`, which resolves to Codex CLI when `codex` is installed, then Claude Code when `claude` is installed, then `prompt-only` when neither runtime is available.
