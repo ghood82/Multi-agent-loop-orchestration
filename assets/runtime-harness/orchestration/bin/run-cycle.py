@@ -119,6 +119,16 @@ def parse_args() -> argparse.Namespace:
         help="Block strict-gated actions unless the latest Eval Monitor result is PASS.",
     )
     parser.add_argument(
+        "--require-fresh-evidence",
+        action="store_true",
+        help="Block strict-gated actions unless required verdicts are stamped with the current HEAD.",
+    )
+    parser.add_argument(
+        "--require-structured",
+        action="store_true",
+        help="Fail a role whose report lacks a valid orchestration-result block.",
+    )
+    parser.add_argument(
         "--policy",
         default="operating-policy.json",
         help="Operating policy JSON path, relative to orchestration root unless absolute.",
@@ -285,6 +295,36 @@ def current_branch(repo: Path) -> str:
     return run(["git", "branch", "--show-current"], repo).stdout.strip()
 
 
+def current_head(root: Path) -> str:
+    result = run(["git", "rev-parse", "HEAD"], root, check=False)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def stale_evidence(root: Path, roles: list[str]) -> str | None:
+    """Return a reason if any required role verdict is not bound to the current HEAD.
+
+    Verdicts are stamped with the commit they reviewed (normalize-report.py). A
+    PASS recorded for an older commit must not gate a newer, unreviewed change.
+    """
+    head = current_head(root)
+    if not head:
+        return None  # No commit to bind to yet; nothing to compare against.
+    raw_verdicts = load_state(root).get("role_verdicts")
+    verdicts: dict[str, Any] = raw_verdicts if isinstance(raw_verdicts, dict) else {}
+    stale: list[str] = []
+    for role in roles:
+        entry = verdicts.get(role)
+        entry = entry if isinstance(entry, dict) else {}
+        commit = str(entry.get("commit") or "")
+        if not commit:
+            stale.append(f"{role} (no commit-stamped verdict)")
+        elif commit != head:
+            stale.append(f"{role} (reviewed {commit[:8]}, HEAD is {head[:8]})")
+    if stale:
+        return "required review evidence is stale: " + ", ".join(stale)
+    return None
+
+
 def append_event(root: Path, role: str, event: str, note: str) -> None:
     event_log = root / "events.log"
     entry = {
@@ -388,12 +428,15 @@ def normalize_reports(
     reports: list[Path],
     open_blockers: bool,
     enabled: bool,
+    require_structured: bool = False,
 ) -> list[Path]:
     if not enabled or not reports:
         return []
     command = ["python3", str(bin_dir / "normalize-report.py")]
     if open_blockers:
         command.append("--open-blockers")
+    if require_structured:
+        command.append("--require-structured")
     command.extend(str(report) for report in reports)
     result = run(command, root, check=False)
     print(result.stdout, end="")
@@ -483,6 +526,10 @@ def apply_policy_defaults(root: Path, args: argparse.Namespace) -> None:
     args.require_human_approval = args.require_human_approval or bool(
         gates.get("require_human_approval")
     )
+    args.require_fresh_evidence = args.require_fresh_evidence or bool(
+        gates.get("require_fresh_evidence")
+    )
+    args.require_structured = args.require_structured or bool(gates.get("require_structured"))
     args.release_strict_file_guard = args.release_strict_file_guard or bool(
         gates.get("strict_file_guard")
     )
@@ -634,6 +681,7 @@ def gate_failure_message(
     require_ci: bool = False,
     require_eval: bool = False,
     require_human_approval: bool = False,
+    require_fresh: bool = False,
 ) -> str | None:
     state = load_state(root)
     blockers = open_blockers(root)
@@ -657,15 +705,24 @@ def gate_failure_message(
     if require_human_approval and not human_approval_exists(root, state):
         return "required human approval artifact is missing."
 
-    if not include_watchdog:
-        return None
+    if include_watchdog:
+        verdict, report = watchdog_verdict(root)
+        if verdict != "PASS":
+            report_note = (
+                f" Latest Watchdog report: {report}" if report else " No Watchdog report found."
+            )
+            return (
+                f"latest Watchdog verdict is not PASS. Found: {verdict or 'missing'}.{report_note}"
+            )
 
-    verdict, report = watchdog_verdict(root)
-    if verdict != "PASS":
-        report_note = (
-            f" Latest Watchdog report: {report}" if report else " No Watchdog report found."
+    if require_fresh:
+        fresh_roles = (["eval"] if require_eval else []) + (
+            ["watchdog"] if include_watchdog else []
         )
-        return f"latest Watchdog verdict is not PASS. Found: {verdict or 'missing'}.{report_note}"
+        stale = stale_evidence(root, fresh_roles)
+        if stale:
+            return stale
+
     return None
 
 
@@ -843,6 +900,7 @@ def enforce_strict_gates(
         include_watchdog=True,
         require_ci=args.require_ci_pass if require_ci is None else require_ci,
         require_eval=args.require_latest_eval_pass,
+        require_fresh=args.require_fresh_evidence,
     )
     if reason:
         stop_for_gate_failure(root, bin_dir, args, action, reason)
@@ -860,6 +918,7 @@ def validate_pr_creation_gates(
         require_ci=args.require_ci_pass if require_ci is None else require_ci,
         require_eval=args.require_latest_eval_pass,
         require_human_approval=args.require_human_approval,
+        require_fresh=args.require_fresh_evidence,
     )
     if reason:
         help_text = ""
@@ -956,6 +1015,7 @@ def main() -> int:
         reports,
         open_blockers=args.open_blockers_from_reports or args.strict_gates,
         enabled=not args.no_normalize_reports,
+        require_structured=args.require_structured,
     )
     dispatch_subagents_if_requested(root, bin_dir, roles, args)
     if not defer_ci:

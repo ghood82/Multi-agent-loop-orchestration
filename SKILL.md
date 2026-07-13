@@ -677,6 +677,14 @@ python3 orchestration/bin/normalize-report.py orchestration/reports/20260629T120
 
 `run-cycle.sh` normalizes generated role reports by default. Add `--open-blockers-from-reports` to open blockers for explicit negative verdicts, listed blockers, required fixes, or stop reasons. Add `--no-normalize-reports` only when debugging the harness itself.
 
+Roles append a machine-readable result contract to their prompt and return it filled in, so the verdict is recorded from structure rather than prose:
+
+```orchestration-result
+{"verdict": "PASS", "summary": "one line", "blockers": [], "tests": [], "risks": []}
+```
+
+When present the block is authoritative. Add `--require-structured` (or `gates.require_structured`) to fail a role and open a blocker when the block is missing/malformed. Each verdict is stamped with the reviewed commit SHA under `state.json` `role_verdicts`; `--require-fresh-evidence` (or `gates.require_fresh_evidence`) then blocks strict-gated actions when a required verdict is not bound to the current HEAD.
+
 Run the file guard directly:
 
 ```bash

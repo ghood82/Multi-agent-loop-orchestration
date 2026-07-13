@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,13 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "state.json"
 EVENT_LOG = ROOT / "events.log"
+
+# The machine-readable result contract a role may emit. When present it is
+# authoritative (no prose-scraping guesswork); `--require-structured` fails the
+# role when it is missing or malformed.
+STRUCTURED_RE = re.compile(
+    r"`{3,}\s*orchestration-result\s*\n(.*?)`{3,}", re.DOTALL | re.IGNORECASE
+)
 
 ROLES = {
     "builder",
@@ -84,6 +92,47 @@ def compact_ts() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
 
 
+def git_head() -> str:
+    """Current commit SHA, so a verdict can be bound to the code it reviewed."""
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def parse_structured(text: str) -> dict[str, Any]:
+    """Extract and validate the ```orchestration-result``` JSON block if present."""
+    match = STRUCTURED_RE.search(text)
+    if not match:
+        return {"found": False, "ok": False, "error": "", "data": {}}
+    raw = match.group(1).strip()
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        return {"found": True, "ok": False, "error": f"invalid JSON: {exc}", "data": {}}
+    if not isinstance(data, dict):
+        return {
+            "found": True,
+            "ok": False,
+            "error": "result block is not a JSON object",
+            "data": {},
+        }
+    if not str(data.get("verdict", "")).strip():
+        return {"found": True, "ok": False, "error": "result block missing 'verdict'", "data": data}
+    return {"found": True, "ok": True, "error": "", "data": data}
+
+
+def string_items(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Normalize orchestration markdown reports.")
     parser.add_argument("reports", nargs="+", help="Markdown report paths.")
@@ -97,6 +146,11 @@ def parse_args() -> argparse.Namespace:
         choices=sorted(ROLES),
         default="",
         help="Override role detection for all provided reports.",
+    )
+    parser.add_argument(
+        "--require-structured",
+        action="store_true",
+        help="Fail (and open a blocker) when a report has no valid orchestration-result block.",
     )
     return parser.parse_args()
 
@@ -280,22 +334,36 @@ def add_blocker(
 def normalize_report(path: Path, role_override: str = "") -> dict[str, Any]:
     text = path.read_text(errors="replace")
     role = detect_role(path, text, role_override)
-    verdict = detect_verdict(text)
-    status = detect_status(text, verdict)
     rel_source = str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)
-    blockers = capture_section_items(
-        text, ["Open blockers", "Blockers", "Required fixes", "Stop reason"]
-    )
-    tests = capture_section_items(text, ["Tests run", "Tests/checks run", "Checks run"])
-    files = capture_section_items(text, ["Files changed", "Files involved", "Files reviewed"])
-    risks = capture_section_items(text, ["Risks", "Regression risks", "Security/privacy findings"])
+    structured = parse_structured(text)
+
+    if structured["ok"]:
+        # The result contract is authoritative: no prose-scraping guesswork.
+        data = structured["data"]
+        verdict = normalize_verdict(str(data.get("verdict", "")))
+        summary = str(data.get("summary", "")).strip() or detect_summary(text)
+        blockers = string_items(data.get("blockers"))
+        tests = string_items(data.get("tests"))
+        files = string_items(data.get("files"))
+        risks = string_items(data.get("risks"))
+    else:
+        verdict = detect_verdict(text)
+        summary = detect_summary(text)
+        blockers = capture_section_items(
+            text, ["Open blockers", "Blockers", "Required fixes", "Stop reason"]
+        )
+        tests = capture_section_items(text, ["Tests run", "Tests/checks run", "Checks run"])
+        files = capture_section_items(text, ["Files changed", "Files involved", "Files reviewed"])
+        risks = capture_section_items(
+            text, ["Risks", "Regression risks", "Security/privacy findings"]
+        )
 
     report = {
         "id": f"{compact_ts()}-{role}",
         "role": role,
-        "status": status,
+        "status": detect_status(text, verdict),
         "verdict": verdict,
-        "summary": detect_summary(text),
+        "summary": summary,
         "evidence": rel_source,
         "created_at": now(),
         "source_report": rel_source,
@@ -304,6 +372,10 @@ def normalize_report(path: Path, role_override: str = "") -> dict[str, Any]:
         "tests": tests,
         "files": files,
         "risks": risks,
+        "structured": bool(structured["ok"]),
+        "contract_found": bool(structured["found"]),
+        "contract_error": str(structured["error"]),
+        "commit": git_head(),
     }
     return report
 
@@ -336,6 +408,18 @@ def apply_report_to_state(
             "status"
         )
 
+    # Bind the verdict to the commit it reviewed so gates can reject stale
+    # evidence (a PASS recorded for an older commit no longer counts once the
+    # code moves on).
+    state.setdefault("role_verdicts", {})[role] = {
+        "verdict": report.get("verdict") or "",
+        "status": report.get("status") or "",
+        "commit": report.get("commit") or "",
+        "structured": bool(report.get("structured")),
+        "report": rel_report,
+        "at": report.get("created_at"),
+    }
+
     if not open_blockers:
         return
 
@@ -353,6 +437,7 @@ def main() -> int:
     args = parse_args()
     state = load_state()
     output_paths: list[Path] = []
+    contract_failures: list[str] = []
     for raw_path in args.reports:
         path = Path(raw_path)
         if not path.is_absolute():
@@ -362,9 +447,27 @@ def main() -> int:
         apply_report_to_state(state, report, report_path, args.open_blockers)
         output_paths.append(report_path)
         log_event(report["role"], "report_normalized", str(report_path.relative_to(ROOT)))
+
+        if args.require_structured and not report["structured"]:
+            role = str(report["role"])
+            reason = report["contract_error"] or "no orchestration-result block found"
+            add_blocker(
+                state,
+                role,
+                f"{role} did not return a valid result contract: {reason}",
+                str(report_path.relative_to(ROOT)),
+                severity="high",
+            )
+            contract_failures.append(role)
+
     save_state(state)
     for path in output_paths:
         print(path)
+    if contract_failures:
+        print(
+            f"Missing/invalid result contract from: {', '.join(contract_failures)}",
+        )
+        return 1
     return 0
 
 

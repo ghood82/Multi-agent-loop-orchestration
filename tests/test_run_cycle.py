@@ -26,6 +26,8 @@ def cycle_args(**overrides):
         "remediate_on_gate_failure": False,
         "require_ci_pass": True,
         "require_latest_eval_pass": False,
+        "require_fresh_evidence": False,
+        "require_structured": False,
         "policy": "operating-policy.json",
         "no_policy": True,
         "watch_ci": True,

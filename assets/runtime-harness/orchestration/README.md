@@ -189,6 +189,24 @@ Resolve blockers only with evidence:
 python3 orchestration/bin/update-state.py resolve-blocker blocker-id --evidence "What proved this is fixed"
 ```
 
+## Result Contract And Fresh Evidence
+
+The orchestrator records a role's verdict from a machine-readable block rather than guessing from prose. Each role appends this to its prompt, and returns it filled in:
+
+```orchestration-result
+{"verdict": "PASS", "summary": "one line", "blockers": [], "tests": [], "risks": []}
+```
+
+When present, the block is authoritative — no scraping of the surrounding prose. `normalize-report.py --require-structured` (or `run-cycle.py --require-structured`, or `gates.require_structured` in the operating policy) fails the role and opens a blocker when the block is missing or malformed, so a role that produces no real verdict cannot silently pass.
+
+Every verdict is stamped with the commit SHA it reviewed, in `state.json` under `role_verdicts`. Turn on freshness enforcement so a PASS recorded for an older commit cannot gate a newer, unreviewed change:
+
+```bash
+python3 orchestration/bin/run-cycle.py --strict-gates --require-fresh-evidence ...
+```
+
+or set `gates.require_fresh_evidence: true` (and `gates.require_structured: true`) in `operating-policy.json`. A required verdict then counts only when its stamped commit matches the current HEAD.
+
 ## Watchdog And Subagents
 
 Watchdog checks product quality, eval quality, process integrity, and drift. It can recommend `PASS`, `REQUEST_FIXES`, or `STOP`, but it does not replace Human Product Owner judgment.
